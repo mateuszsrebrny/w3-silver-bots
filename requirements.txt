@@ -1,0 +1,2 @@
+cloudscraper==1.2.71
+web3==7.6.0

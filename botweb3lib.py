@@ -106,7 +106,7 @@ def get_w3():
     _w3 = Web3(Web3.HTTPProvider(_rpc_url[get_chain()]))
     print("after w3 creation")
 
-    if not _w3.isConnected():
+    if not _w3.is_connected():
       print("w3 NOT connected")
       exit(-1)
     print("w3 is connected")
@@ -119,7 +119,7 @@ def my_toWei(quantity, unit):
   return wei
 
 def my_fromWei(wei, unit):
-  quantity = Web3.fromWei(wei, unit)
+  quantity = Web3.from_wei(wei, unit)
   if unit == "lovelace":
     return quantity / 100
   return quantity
@@ -163,8 +163,8 @@ def check_balance(tokens):
 
   return balance
 
-with open("private_key_file") as f:
-  _b_k = f.read()
+#with open("private_key_file") as f:
+#  _b_k = f.read()
 
 def sign_n_send_transaction(txn = {}, contract_fun = None):
   
