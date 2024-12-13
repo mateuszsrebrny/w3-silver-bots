@@ -149,17 +149,17 @@ def init_token_contract(token):
 
   _contract[token] = get_w3().eth.contract(address=get_contract_address(token), abi=abi)
 
-def check_balance_token(token):
+def check_balance_token(token, wallet = _bot_address):
   init_token_contract(token)
 
-  balance_wei = _contract[token].functions.balanceOf(_bot_address).call()
+  balance_wei = _contract[token].functions.balanceOf(wallet).call()
   return my_fromWei(balance_wei, decimals[token])
 
-def check_balance(tokens):
+def check_balance(tokens, wallet = _bot_address):
   balance = {}
   for token in tokens:
-    balance[token] = check_balance_token(token)
-    print("holding:", balance[token], token)
+    balance[token] = check_balance_token(token, wallet)
+    print("holding(", wallet, "):", balance[token], token)
 
   return balance
 
