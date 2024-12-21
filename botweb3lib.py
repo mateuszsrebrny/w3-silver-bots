@@ -38,6 +38,9 @@ def get_contract_address(contract_type, name):
 def get_token_contract_address(token):
   return get_contract_address("erc20", token)
 
+def get_swap_contract_address(swap_name):
+  return get_contract_address("swap", swap_name)
+
 def get_decimals(token):
   return _config["networks"][get_chain()]["contracts"]["erc20"][token]["decimals"]
 
