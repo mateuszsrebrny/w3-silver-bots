@@ -41,19 +41,11 @@ def get_token_contract_address(token):
 def get_decimals(token):
   return _config["networks"][get_chain()]["contracts"]["erc20"][token]["decimals"]
 
-
-_rpc_url = {
-  "polygon" : "https://polygon-rpc.com/",
-  "optimism" : "https://rpc.ankr.com/optimism",
-}
-
-_chain_id = {
-  "polygon" : 137,
-  "optimism" : 10,
-}
+def get_rpc_url(chain):
+  return _config["networks"][chain]["rpc_url"]
 
 def get_chain_id():
-  return _chain_id[get_chain()]
+  return _config["networks"][get_chain()]["chain_id"]
 
 _w3 = None
 
@@ -61,7 +53,7 @@ def get_w3():
   global _w3
   if not _w3:
     print("before w3 creation")
-    _w3 = Web3(Web3.HTTPProvider(_rpc_url[get_chain()]))
+    _w3 = Web3(Web3.HTTPProvider(get_rpc_url(get_chain())))
     print("after w3 creation")
 
     if not _w3.is_connected():
