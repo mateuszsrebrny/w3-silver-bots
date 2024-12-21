@@ -38,29 +38,9 @@ def get_contract_address(contract_type, name):
 def get_token_contract_address(token):
   return get_contract_address("erc20", token)
 
+def get_decimals(token):
+  return _config["networks"][get_chain()]["contracts"]["erc20"][token]["decimals"]
 
-decimals = {
-  "weth" : "ether",
-  "mai" : "ether",
-  "dai" : "ether",
-  "aave" : "ether",
-  "bal" : "ether",
-  "qi" : "ether",
-  "wmatic" : "ether",
-  "glm" : "ether",
-  "link" : "ether",
-  "crv" : "ether",
-  "sand" : "ether",
-  "fxs" : "ether",
-  "bal" : "ether",
-  "stmatic" : "ether",
-  "ldo" : "ether",
-  "uni" : "ether",
-  "jeur" : "ether",
-  "op" : "ether",
-  "wbtc" : "lovelace", # hack to get 8 decimals
-  "usdc" : "mwei",
-}
 
 _rpc_url = {
   "polygon" : "https://polygon-rpc.com/",
@@ -131,7 +111,7 @@ def check_balance_token(token, wallet = _bot_address):
   init_token_contract(token)
 
   balance_wei = _contract[token].functions.balanceOf(wallet).call()
-  return my_fromWei(balance_wei, decimals[token])
+  return my_fromWei(balance_wei, get_decimals(token))
 
 def check_balance(tokens, wallet = _bot_address):
   balance = {}
@@ -216,7 +196,7 @@ def sell_uniswapv2(pair, input_quantity, buy_stops, swap_name):
   buy_path = pair.copy()
   buy_path[1:1] = buy_stops
   
-  input_quantity_wei = my_toWei(input_quantity, decimals[pair[0]])
+  input_quantity_wei = my_toWei(input_quantity, get_decimals(pair[0]))
   minimum_input_quantity_wei = int(input_quantity_wei * 0.003)
 
   contracts_path = swap_contracts_path(buy_path)
@@ -281,7 +261,7 @@ def check_1inch_price(pair, input_quantity):
   fromTokenName = pair[0]
   toTokenName = pair[1]
 
-  input_quantity_wei = my_toWei(input_quantity, decimals[fromTokenName])
+  input_quantity_wei = my_toWei(input_quantity, get_decimals(fromTokenName))
   fromTokenAddress = get_token_contract_address(fromTokenName)
   toTokenAddress = get_token_contract_address(toTokenName)
 
@@ -295,7 +275,7 @@ def check_1inch_price(pair, input_quantity):
  
   try:
     output_quantity_wei = int(quote_json['toTokenAmount'])
-    output_quantity = my_fromWei(output_quantity_wei, decimals[toTokenName])
+    output_quantity = my_fromWei(output_quantity_wei, get_decimals(toTokenName))
 
     print("1inch:",input_quantity, pair[0], "->", output_quantity, pair[-1])
     return output_quantity
@@ -307,7 +287,7 @@ def check_1inch_price(pair, input_quantity):
 
 def sell_1inch(sell_token, sell_amount, buy_token):
   #print("1inch selling", sell_amount, sell_token, "into", buy_token)
-  sell_amount_wei = my_toWei(sell_amount, decimals[sell_token])
+  sell_amount_wei = my_toWei(sell_amount, get_decimals(sell_token))
 
   swap_params = {
     "fromTokenAddress" : get_token_contract_address(sell_token),
@@ -350,14 +330,14 @@ def sell(pair, input_quantity, buy_stops, swap_name):
 
 def get_amounts_out(path, input_quantity, swap):
 
-  input_quantity_wei = my_toWei(input_quantity, decimals[path[0]])
+  input_quantity_wei = my_toWei(input_quantity, get_decimals(path[0]))
 
   contracts_path = swap_contracts_path(path)
   
   get_amounts_out_result = get_univ2_contract(swap).functions.getAmountsOut(input_quantity_wei, contracts_path).call()
 
-  input_amount = my_fromWei(get_amounts_out_result[0], decimals[path[0]])
-  output_amount = my_fromWei(get_amounts_out_result[-1], decimals[path[-1]])
+  input_amount = my_fromWei(get_amounts_out_result[0], get_decimals(path[0]))
+  output_amount = my_fromWei(get_amounts_out_result[-1], get_decimals(path[-1]))
 
   print(swap, path, ":",input_amount, path[0], "->", output_amount, path[-1])
   
