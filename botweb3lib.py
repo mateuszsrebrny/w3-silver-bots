@@ -3,6 +3,7 @@ import json
 import requests
 import traceback
 import cloudscraper 
+import yaml
 from web3 import Web3
 
 _bot_address = "0x5084a58B67152f21FFBEb73b231E61318cEEcB74"
@@ -12,7 +13,9 @@ _chain = "polygon"
 
 _dry_run = True
 
-def setup_botweb3lib(chain, dry_run):
+_config = None
+
+def setup_botweb3lib(chain, dry_run, config_path = "chains.config.yaml"):
   global _chain
   _chain = chain
   print("chain:", _chain)
@@ -21,45 +24,20 @@ def setup_botweb3lib(chain, dry_run):
   _dry_run = dry_run
   print("dry_run:", _dry_run)
 
+  global _config
+  with open(config_path, "r") as file:
+    _config = yaml.safe_load(file)
+  #print(_config)
+
 def get_chain():
   return _chain
 
-_contract_address = {}
+def get_contract_address(contract_type, name):
+  return _config["networks"][get_chain()]["contracts"][contract_type][name]["address"]
 
-#polygon contracts
-_contract_address["polygon"] = {
-  "quickswap" : "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff",
-  "apeswap" : "0x9E31215F6421c4EED2c04116d430CaF30999680d",
-  "sushiswap" : "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506",
-  "weth" : "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619",
-  "mai" : "0xa3Fa99A148fA48D14Ed51d610c367C61876997F1",
-  "dai" : "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063",
-  "aave" : "0xD6DF932A45C0f255f85145f286eA0b292B21C90B",
-  "qi" : "0x580A84C73811E1839F75d86d75d88cCa0c241fF4",
-  "wmatic" : "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
-  "glm" : "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf",
-  "link" : "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39",
-  "sand" : "0xBbba073C31bF03b8ACf7c28EF0738DeCF3695683",
-  "wbtc" : "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
-  "uni" : "0xb33EaAd8d922B1083446DC23f610c2567fB5180f",
-  "jeur" : "0x4e3Decbb3645551B8A19f0eA1678079FCB33fB4c",
-  "usdc" : "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-  "bal" : "0x9a71012B13CA4d3D0Cdc72A177DF3ef03b0E76A3",
-  "stmatic" : "0x3A58a54C066FdC0f2D55FC9C89F0415C92eBf3C4",
-  "ldo" : "0xC3C7d422809852031b44ab29EEC9F1EfF2A58756",
-}
+def get_token_contract_address(token):
+  return get_contract_address("erc20", token)
 
-_contract_address["optimism"] = {
-  "op" : "0x4200000000000000000000000000000000000042",
-  "mai" : "0xdFA46478F9e5EA86d57387849598dbFB2e964b02",
-  "dai" : "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1",
-  "weth" : "0x4200000000000000000000000000000000000006",
-  "qi" : "0x3F56e0c36d275367b8C502090EDF38289b3dEa0d",
-  "ldo" : "0xFdb794692724153d1488CcdBE0C56c252596735F",
-}
-
-def get_contract_address(contract):
-  return _contract_address[get_chain()][contract]
 
 decimals = {
   "weth" : "ether",
@@ -133,7 +111,7 @@ def get_univ2_contract(swap_name):
   with open("abi/" + swap_name + "swap.abi.json") as f:
       abi_json = json.load(f)
   abi = abi_json["result"]
-  address = get_contract_address(swap_name + "swap")
+  address = get_swap_contract_address(swap_name + "swap")
   _contract[swap_name] = get_w3().eth.contract(address=address, abi=abi)
 
   return _contract[swap_name]
@@ -147,7 +125,7 @@ def init_token_contract(token):
 
   abi = info_json["result"]
 
-  _contract[token] = get_w3().eth.contract(address=get_contract_address(token), abi=abi)
+  _contract[token] = get_w3().eth.contract(address=get_token_contract_address(token), abi=abi)
 
 def check_balance_token(token, wallet = _bot_address):
   init_token_contract(token)
@@ -229,7 +207,7 @@ def sign_n_send_transaction(txn = {}, contract_fun = None):
 def swap_contracts_path(swap_path):
   path = []
   for token in swap_path:
-    path.append(get_contract_address(token))
+    path.append(get_token_contract_address(token))
   return path
 
 
@@ -270,7 +248,7 @@ def _call_1inch_api(method, call_params):
 
 def check_1inch_allowance(tokenName):
   allow_params = {
-    "tokenAddress" : get_contract_address(tokenName),
+    "tokenAddress" : get_token_contract_address(tokenName),
     "walletAddress" : _bot_address,
   }
 
@@ -304,8 +282,8 @@ def check_1inch_price(pair, input_quantity):
   toTokenName = pair[1]
 
   input_quantity_wei = my_toWei(input_quantity, decimals[fromTokenName])
-  fromTokenAddress = get_contract_address(fromTokenName)
-  toTokenAddress = get_contract_address(toTokenName)
+  fromTokenAddress = get_token_contract_address(fromTokenName)
+  toTokenAddress = get_token_contract_address(toTokenName)
 
   quote_params = {
     "fromTokenAddress" : fromTokenAddress,
@@ -332,8 +310,8 @@ def sell_1inch(sell_token, sell_amount, buy_token):
   sell_amount_wei = my_toWei(sell_amount, decimals[sell_token])
 
   swap_params = {
-    "fromTokenAddress" : get_contract_address(sell_token),
-    "toTokenAddress" : get_contract_address(buy_token),
+    "fromTokenAddress" : get_token_contract_address(sell_token),
+    "toTokenAddress" : get_token_contract_address(buy_token),
     "amount" : sell_amount_wei,
     "fromAddress" : _bot_address,
     "slippage" : 1,
