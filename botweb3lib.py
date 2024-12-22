@@ -107,7 +107,7 @@ class BlockchainAccess:
         balance = {}
         for token in tokens:
             balance[token] = self.check_balance_token(token, wallet)
-            print("holding(", wallet, "):", balance[token], token)
+            print(f"holding( {wallet} @ {self._chain} ): {balance[token]} {token}")
 
         return balance
 

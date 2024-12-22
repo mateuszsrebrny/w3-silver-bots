@@ -8,7 +8,6 @@ from botweb3lib import BlockchainAccess
 # Load environment variables from the .env file
 load_dotenv()
 
-chain = "polygon"
 dry_run = True
 wallet = os.getenv("WALLET")
 
@@ -16,7 +15,15 @@ print(f"wallet: {wallet}")
 
 BlockchainAccess.load_config()
 
-blockchain = BlockchainAccess(chain, dry_run)
+polygon = BlockchainAccess("polygon", dry_run)
 
-balance = blockchain.check_balance(["dai", "wmatic"], wallet)
-print(balance)
+polygon_balance = polygon.check_balance(["dai", "wmatic"], wallet)
+
+
+optimism = BlockchainAccess("optimism", dry_run)
+
+optimism_balance = optimism.check_balance(["dai", "op"], wallet)
+
+
+print(polygon_balance)
+print(optimism_balance)
