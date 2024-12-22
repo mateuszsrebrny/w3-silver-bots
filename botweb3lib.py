@@ -34,6 +34,9 @@ class BlockchainAccess:
         self._w3 = None
         self._contract = {}
 
+    def get_chain(self):
+        return self._chain
+
     def get_config(self):
         return BlockchainAccess._config["networks"][self._chain]
 
