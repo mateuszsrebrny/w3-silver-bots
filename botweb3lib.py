@@ -40,6 +40,15 @@ class BlockchainAccess:
     def get_rpc_url(self):
         return self.get_config()["rpc_url"]
 
+    def get_chain_id(self):
+        return self.get_config()["chain_id"]
+
+    def get_decimals(self, token):
+        return self.get_config()["contracts"]["erc20"][token]["decimals"]
+
+    def get_all_tokens(self):
+        return self.get_config()["contracts"]["erc20"].keys()
+
     def get_contract_address(self, contract_type, name):
         return self.get_config()["contracts"][contract_type][name]["address"]
 
@@ -48,12 +57,6 @@ class BlockchainAccess:
 
     def get_swap_contract_address(self, swap_name):
         return self.get_contract_address("swap", swap_name)
-
-    def get_decimals(self, token):
-        return self.get_config()["contracts"]["erc20"][token]["decimals"]
-
-    def get_chain_id(self):
-        return self.get_config()["chain_id"]
 
     def get_w3(self):
         if not self._w3:

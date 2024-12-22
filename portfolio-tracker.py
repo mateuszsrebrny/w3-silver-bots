@@ -17,12 +17,15 @@ BlockchainAccess.load_config()
 
 polygon = BlockchainAccess("polygon", dry_run)
 
-balance_polygon = polygon.check_balance(["dai", "wmatic"], wallet)
+tokens_polygon = polygon.get_all_tokens()
+
+balance_polygon = polygon.check_balance(tokens_polygon, wallet)
 
 
 optimism = BlockchainAccess("optimism", dry_run)
+tokens_optimism = optimism.get_all_tokens()
 
-balance_optimism = optimism.check_balance(["dai", "op"], wallet)
+balance_optimism = optimism.check_balance(tokens_optimism, wallet)
 
 
 print(balance_polygon)
