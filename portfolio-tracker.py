@@ -18,21 +18,20 @@ BlockchainAccess.load_config()
 blockchains = {}
 balances = {}
 
+
 def print_balances(chain):
     print("chain:", chain)
     global balances
     for token, balance in balances[chain].items():
-        print(token, ":", balance)
+        print(f"  {token} : {balance}")
 
 
 for chain in ["polygon", "optimism"]:
 
-    blockchains[chain]  = BlockchainAccess(chain, dry_run)
+    blockchains[chain] = BlockchainAccess(chain, dry_run)
 
     tokens = blockchains[chain].get_all_tokens()
 
-    balances[chain] = blockchains[chain].check_balance(tokens_polygon, wallet)
+    balances[chain] = blockchains[chain].check_balance(tokens, wallet)
 
     print_balances(chain)
-
-
