@@ -3,7 +3,7 @@
 from dotenv import load_dotenv
 import os
 
-import botweb3lib
+from botweb3lib import BlockchainAccess
 
 # Load environment variables from the .env file
 load_dotenv()
@@ -14,8 +14,9 @@ wallet = os.getenv("WALLET")
 
 print(f"wallet: {wallet}")
 
+BlockchainAccess.load_config()
 
-botweb3lib.setup_botweb3lib(chain, dry_run)
+blockchain = BlockchainAccess(chain, dry_run)
 
-balance = botweb3lib.check_balance(["dai", "wmatic"], wallet)
+balance = blockchain.check_balance(["dai", "wmatic"], wallet)
 print(balance)
