@@ -15,18 +15,24 @@ print(f"wallet: {wallet}")
 
 BlockchainAccess.load_config()
 
-polygon = BlockchainAccess("polygon", dry_run)
+blockchains = {}
+balances = {}
 
-tokens_polygon = polygon.get_all_tokens()
-
-balance_polygon = polygon.check_balance(tokens_polygon, wallet)
-
-
-optimism = BlockchainAccess("optimism", dry_run)
-tokens_optimism = optimism.get_all_tokens()
-
-balance_optimism = optimism.check_balance(tokens_optimism, wallet)
+def print_balances(chain):
+    print("chain:", chain)
+    global balances
+    for token, balance in balances[chain].items():
+        print(token, ":", balance)
 
 
-print(balance_polygon)
-print(balance_optimism)
+for chain in ["polygon", "optimism"]:
+
+    blockchains[chain]  = BlockchainAccess(chain, dry_run)
+
+    tokens = blockchains[chain].get_all_tokens()
+
+    balances[chain] = blockchains[chain].check_balance(tokens_polygon, wallet)
+
+    print_balances(chain)
+
+
