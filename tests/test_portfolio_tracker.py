@@ -1,6 +1,6 @@
 from pathlib import Path
+import runpy
 
-import pytest
 import yaml
 
 import portfolio_tracker
@@ -113,3 +113,31 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     assert "Wallet: 0xwallet" in captured.out
     assert "config_loaded" in captured.out
     assert "balances=['b1', 'b2']" in captured.out
+
+
+def test_module_runs_main_when_executed_as_script(monkeypatch):
+    monkeypatch.setenv("WALLET", "0xwallet")
+
+    class FakeBlockchainAccessClass:
+        @staticmethod
+        def load_config():
+            return None
+
+        def __init__(self, chain, dry_run):
+            self._chain = chain
+
+        def get_chain(self):
+            return self._chain
+
+        def check_balance(self, tokens, wallet):
+            return {tokens[0]: 1}
+
+        def check_kyberswap_price(self, path, quantity):
+            return quantity
+
+    monkeypatch.setattr("dotenv.load_dotenv", lambda: None)
+    monkeypatch.setattr("botweb3lib.BlockchainAccess", FakeBlockchainAccessClass)
+
+    module_globals = runpy.run_module("portfolio_tracker", run_name="__main__")
+
+    assert module_globals["__name__"] == "__main__"

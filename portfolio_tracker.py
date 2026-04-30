@@ -93,3 +93,7 @@ def main():
     token_balances = build_balances(DEFAULT_CHAINS, wallet, dry_run=dry_run)
     sort_balances(token_balances)
     print_balances(token_balances)
+
+
+if __name__ == "__main__":
+    main()
