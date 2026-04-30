@@ -1,8 +1,13 @@
 networks:
   polygon:
-    rpc_url: "https://polygon-rpc.com/"
+    rpc_url: "https://polygon.drpc.org"
     chain_id: 137
     contracts:
+      uniswap_v3:
+        factory:
+          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
+        quoter:
+          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
       swaps:
         quickswap: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
         apeswap: "0x9E31215F6421c4EED2c04116d430CaF30999680d"
@@ -57,9 +62,14 @@ networks:
           address: "0xC3C7d422809852031b44ab29EEC9F1EfF2A58756"
           decimals: "ether"
   optimism:
-    rpc_url: "https://rpc.ankr.com/optimism"
+    rpc_url: "https://mainnet.optimism.io"
     chain_id: 10
     contracts:
+      uniswap_v3:
+        factory:
+          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
+        quoter:
+          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
       erc20:
         op: 
           address: "0x4200000000000000000000000000000000000042"
@@ -70,6 +80,9 @@ networks:
         dai:
           address: "0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1"
           decimals: "ether"
+        usdc:
+          address: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85"
+          decimals: "mwei"
         weth:
           address: "0x4200000000000000000000000000000000000006"
           decimals: "ether"

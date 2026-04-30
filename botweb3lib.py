@@ -1,10 +1,62 @@
-import time
 import json
-import requests
-import traceback
-import cloudscraper
 import yaml
 from web3 import Web3
+
+UNISWAP_V3_FACTORY_ABI = [
+    {
+        "inputs": [
+            {"internalType": "address", "name": "tokenA", "type": "address"},
+            {"internalType": "address", "name": "tokenB", "type": "address"},
+            {"internalType": "uint24", "name": "fee", "type": "uint24"},
+        ],
+        "name": "getPool",
+        "outputs": [{"internalType": "address", "name": "pool", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function",
+    }
+]
+
+UNISWAP_V3_QUOTER_V2_ABI = [
+    {
+        "inputs": [
+            {
+                "components": [
+                    {"internalType": "address", "name": "tokenIn", "type": "address"},
+                    {"internalType": "address", "name": "tokenOut", "type": "address"},
+                    {"internalType": "uint256", "name": "amountIn", "type": "uint256"},
+                    {"internalType": "uint24", "name": "fee", "type": "uint24"},
+                    {
+                        "internalType": "uint160",
+                        "name": "sqrtPriceLimitX96",
+                        "type": "uint160",
+                    },
+                ],
+                "internalType": "struct IQuoterV2.QuoteExactInputSingleParams",
+                "name": "params",
+                "type": "tuple",
+            }
+        ],
+        "name": "quoteExactInputSingle",
+        "outputs": [
+            {"internalType": "uint256", "name": "amountOut", "type": "uint256"},
+            {
+                "internalType": "uint160",
+                "name": "sqrtPriceX96After",
+                "type": "uint160",
+            },
+            {
+                "internalType": "uint32",
+                "name": "initializedTicksCrossed",
+                "type": "uint32",
+            },
+            {"internalType": "uint256", "name": "gasEstimate", "type": "uint256"},
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    }
+]
+
+UNISWAP_V3_FEE_TIERS = (500, 3000, 10000)
 
 
 class BlockchainAccess:
@@ -53,13 +105,30 @@ class BlockchainAccess:
         return self.get_config()["contracts"]["erc20"].keys()
 
     def get_contract_address(self, contract_type, name):
-        return self.get_config()["contracts"][contract_type][name]["address"]
+        contracts = self.get_config()["contracts"]
+        contract_group = contracts.get(contract_type)
+
+        if contract_group is None:
+            contract_group = contracts.get(contract_type + "s")
+
+        if contract_group is None:
+            raise KeyError(f"Unknown contract type: {contract_type}")
+
+        contract_info = contract_group[name]
+
+        if isinstance(contract_info, dict):
+            return contract_info["address"]
+
+        return contract_info
 
     def get_token_contract_address(self, token):
         return self.get_contract_address("erc20", token)
 
     def get_swap_contract_address(self, swap_name):
         return self.get_contract_address("swap", swap_name)
+
+    def get_dex_contract_address(self, dex_name, contract_name):
+        return self.get_contract_address(dex_name, contract_name)
 
     def get_w3(self):
         if not self._w3:
@@ -76,7 +145,7 @@ class BlockchainAccess:
 
     @classmethod
     def my_toWei(cls, quantity, unit):
-        wei = Web3.toWei(quantity, unit)
+        wei = Web3.to_wei(quantity, unit)
         if unit == "lovelace":
             return wei * 100
         return wei
@@ -88,7 +157,10 @@ class BlockchainAccess:
             return quantity / 100
         return quantity
 
-    # balance = blockchain.check_balance(["dai", "wmatic"], wallet)
+    def _get_cached_contract(self, cache_key, address, abi):
+        if cache_key not in self._contract:
+            self._contract[cache_key] = self.get_w3().eth.contract(address=address, abi=abi)
+        return self._contract[cache_key]
 
     def init_token_contract(self, token):
         if token in self._contract:
@@ -117,6 +189,102 @@ class BlockchainAccess:
 
         return balance
 
+    def get_uniswap_v3_factory(self):
+        return self._get_cached_contract(
+            "uniswap_v3_factory",
+            self.get_dex_contract_address("uniswap_v3", "factory"),
+            UNISWAP_V3_FACTORY_ABI,
+        )
+
+    def get_uniswap_v3_quoter(self):
+        return self._get_cached_contract(
+            "uniswap_v3_quoter",
+            self.get_dex_contract_address("uniswap_v3", "quoter"),
+            UNISWAP_V3_QUOTER_V2_ABI,
+        )
+
+    def get_uniswap_v3_pool_address(self, token_in, token_out, fee):
+        token_in_address = self.get_token_contract_address(token_in)
+        token_out_address = self.get_token_contract_address(token_out)
+        return self.get_uniswap_v3_factory().functions.getPool(
+            token_in_address, token_out_address, fee
+        ).call()
+
+    def check_uniswap_price(self, pair, input_quantity, fee=None, fee_tiers=None):
+        from_token = pair[0]
+        to_token = pair[1]
+
+        if from_token == to_token:
+            return input_quantity
+
+        input_quantity_wei = BlockchainAccess.my_toWei(
+            input_quantity, self.get_decimals(from_token)
+        )
+
+        if input_quantity_wei == 0:
+            return 0
+
+        token_in_address = self.get_token_contract_address(from_token)
+        token_out_address = self.get_token_contract_address(to_token)
+        candidate_fees = (fee,) if fee is not None else (fee_tiers or UNISWAP_V3_FEE_TIERS)
+
+        best_output_quantity = 0
+
+        for current_fee in candidate_fees:
+            try:
+                pool_address = self.get_uniswap_v3_pool_address(
+                    from_token, to_token, current_fee
+                )
+
+                if int(pool_address, 16) == 0:
+                    continue
+
+                quote = self.get_uniswap_v3_quoter().functions.quoteExactInputSingle(
+                    (
+                        token_in_address,
+                        token_out_address,
+                        input_quantity_wei,
+                        current_fee,
+                        0,
+                    )
+                ).call()
+                output_quantity_wei = quote[0]
+                output_quantity = BlockchainAccess.my_fromWei(
+                    output_quantity_wei, self.get_decimals(to_token)
+                )
+
+                if output_quantity > best_output_quantity:
+                    best_output_quantity = output_quantity
+            except Exception:
+                continue
+
+        if best_output_quantity > 0:
+            print(
+                "uniswap_v3:",
+                input_quantity,
+                from_token,
+                "->",
+                best_output_quantity,
+                to_token,
+            )
+
+        return best_output_quantity
+
+    def check_uniswap_price_path(self, path, input_quantity, fee_tiers=None):
+        if len(path) < 2:
+            return input_quantity
+
+        output_quantity = input_quantity
+
+        for from_token, to_token in zip(path, path[1:]):
+            output_quantity = self.check_uniswap_price(
+                [from_token, to_token], output_quantity, fee_tiers=fee_tiers
+            )
+
+            if output_quantity == 0:
+                return 0
+
+        return output_quantity
 
 ##################################################
 # Not used, nor refactored into BlockchainAccess #
@@ -234,21 +402,6 @@ class BlockchainAccess:
 #    sign_n_send_transaction(contract_fun=fun)
 #
 #
-# def _build_1inch_url(method):
-#    return "https://api.1inch.io/v5.0/" + str(get_chain_id()) + "/" + method
-#
-#
-# def _call_1inch_api(method, call_params):
-#    _url = _build_1inch_url(method)
-#
-#    _scraper = cloudscraper.create_scraper()
-#
-#    call_json = _scraper.get(_url, params=call_params).json()
-#    # print(call_json)
-#
-#    return call_json
-#
-#
 # def check_1inch_allowance(tokenName):
 #    allow_params = {
 #        "tokenAddress": get_token_contract_address(tokenName),
@@ -277,36 +430,6 @@ class BlockchainAccess:
 #
 #    print("don't know how to check allowance on", swap)
 #    return False
-#
-#
-# def check_1inch_price(pair, input_quantity):
-#
-#    fromTokenName = pair[0]
-#    toTokenName = pair[1]
-#
-#    input_quantity_wei = my_toWei(input_quantity, get_decimals(fromTokenName))
-#    fromTokenAddress = get_token_contract_address(fromTokenName)
-#    toTokenAddress = get_token_contract_address(toTokenName)
-#
-#    quote_params = {
-#        "fromTokenAddress": fromTokenAddress,
-#        "toTokenAddress": toTokenAddress,
-#        "amount": input_quantity_wei,
-#    }
-#
-#    quote_json = _call_1inch_api("quote", quote_params)
-#
-#    try:
-#        output_quantity_wei = int(quote_json["toTokenAmount"])
-#        output_quantity = my_fromWei(output_quantity_wei, get_decimals(toTokenName))
-#
-#        print("1inch:", input_quantity, pair[0], "->", output_quantity, pair[-1])
-#        return output_quantity
-#
-#    except Exception as e:
-#        traceback.print_exc()
-#        print("check_1inch_price:", quote_json)
-#        return 0
 #
 #
 # def sell_1inch(sell_token, sell_amount, buy_token):
