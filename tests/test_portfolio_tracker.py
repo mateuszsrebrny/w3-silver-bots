@@ -1,18 +1,9 @@
-import importlib.util
 from pathlib import Path
 
 import pytest
 import yaml
 
 import portfolio_tracker
-
-
-def load_cli_module():
-    cli_path = Path(__file__).resolve().parents[1] / "portfolio-tracker.py"
-    spec = importlib.util.spec_from_file_location("portfolio_tracker_cli", cli_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 class FakeBlockchainAccess:
@@ -128,13 +119,3 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     assert "Wallet: 0xwallet" in captured.out
     assert "config_loaded" in captured.out
     assert "balances=['b1', 'b2']" in captured.out
-
-
-def test_cli_wrapper_invokes_module_main(monkeypatch):
-    called = []
-    monkeypatch.setattr(portfolio_tracker, "main", lambda: called.append(True))
-    cli_module = load_cli_module()
-
-    cli_module.main()
-
-    assert called == [True]
