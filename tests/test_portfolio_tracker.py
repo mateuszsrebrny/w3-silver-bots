@@ -21,24 +21,6 @@ class FakeBlockchainAccess:
         return quantity * 3
 
 
-def test_get_value_paths_formats_token_name():
-    assert portfolio_tracker.get_value_paths("polygon", "bal") == [
-        ("kyberswap", ["bal", "usdc"])
-    ]
-
-
-def test_quote_path_uses_kyberswap_and_rejects_other_shapes():
-    access = FakeBlockchainAccess("polygon", True)
-
-    assert portfolio_tracker.quote_path(access, "kyberswap", ["bal", "usdc"], 2) == 6
-    assert portfolio_tracker.quote_path(access, "kyberswap", ["bal"], 2) == 0
-
-
-def test_quote_path_rejects_unknown_venue():
-    with pytest.raises(ValueError):
-        portfolio_tracker.quote_path(object(), "unknown", ["a", "b"], 1)
-
-
 def test_token_balance_fetches_balance_and_value():
     token_balance = portfolio_tracker.TokenBalance(
         FakeBlockchainAccess("polygon", True),
@@ -49,6 +31,19 @@ def test_token_balance_fetches_balance_and_value():
     assert token_balance.balance == 7
     assert token_balance.value == 21
     assert str(token_balance) == "bal @ polygon: 7 = 21 usdc"
+
+
+def test_token_balance_uses_requested_value_token():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("polygon", True),
+        "bal",
+        "0xwallet",
+        value_token="dai",
+    )
+
+    assert token_balance.value_token == "dai"
+    assert token_balance.value == 21
+    assert str(token_balance) == "bal @ polygon: 7 = 21 dai"
 
 
 def test_sort_balances_orders_by_value_descending():
@@ -90,7 +85,6 @@ def test_all_tracked_tokens_exist_in_config():
 
     for chain in portfolio_tracker.DEFAULT_CHAINS:
         assert chain in portfolio_tracker.TRACKED_TOKENS
-        assert chain in portfolio_tracker.VALUE_PATHS
         assert chain in networks
 
         configured_tokens = networks[chain]["contracts"]["erc20"]

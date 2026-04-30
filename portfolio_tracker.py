@@ -5,44 +5,12 @@ from botweb3lib import BlockchainAccess
 DEFAULT_CHAINS = ["polygon", "optimism", "ethereum", "arbitrum"]
 DEFAULT_VALUE_TOKEN = "usdc"
 
-VALUE_PATHS = {
-    "polygon": {
-        "default": [("kyberswap", ["{token}", "usdc"])],
-    },
-    "optimism": {
-        "default": [("kyberswap", ["{token}", "usdc"])],
-    },
-    "ethereum": {
-        "default": [("kyberswap", ["{token}", "usdc"])],
-    },
-    "arbitrum": {
-        "default": [("kyberswap", ["{token}", "usdc"])],
-    },
-}
-
 TRACKED_TOKENS = {
     "polygon": ["pol", "aave", "link", "ghst", "bal"],
     "optimism": ["eth", "velo"],
     "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
     "arbitrum": ["aarb", "eth"],
 }
-
-
-def get_value_paths(chain, token_name):
-    chain_paths = VALUE_PATHS[chain]
-    template_paths = chain_paths.get(token_name, chain_paths["default"])
-    return [
-        (venue, [step.format(token=token_name) for step in path])
-        for venue, path in template_paths
-    ]
-
-
-def quote_path(blockchain_access, venue, path, input_quantity):
-    if venue == "kyberswap":
-        if len(path) != 2:
-            return 0
-        return blockchain_access.check_kyberswap_price(path, input_quantity)
-    raise ValueError(f"Unknown venue: {venue}")
 
 
 class TokenBalance:
@@ -67,16 +35,10 @@ class TokenBalance:
         ]
 
     def _fetch_value(self):
-        candidate_paths = get_value_paths(
-            self._blockchain_access.get_chain(), self.token_name
+        return self._blockchain_access.check_kyberswap_price(
+            [self.token_name, self.value_token],
+            self.balance,
         )
-
-        for venue, path in candidate_paths:
-            value = quote_path(self._blockchain_access, venue, path, self.balance)
-            if value > 0 or len(path) == 1:
-                return value
-
-        return 0
 
     def __str__(self):
         return (
