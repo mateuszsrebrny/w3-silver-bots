@@ -19,76 +19,15 @@ BlockchainAccess.load_config()
 
 VALUE_PATHS = {
     "polygon": {
-        "pol": [("kyberswap", ["pol", "usdc"])],
-        "dai": [("kyberswap", ["dai", "usdc"]), ("uniswap_v3", ["dai", "usdc"])],
-        "usdc": [("kyberswap", ["usdc", "usdc"]), ("uniswap_v3", ["usdc"])],
-        "weth": [
-            ("kyberswap", ["weth", "usdc"]),
-            ("uniswap_v3", ["weth", "usdc"]),
-            ("quickswap_v2", ["weth", "usdc"]),
-        ],
-        "wmatic": [
-            ("kyberswap", ["wmatic", "usdc"]),
-            ("uniswap_v3", ["wmatic", "usdc"]),
-            ("quickswap_v2", ["wmatic", "usdc"]),
-        ],
-        "wbtc": [
-            ("kyberswap", ["wbtc", "usdc"]),
-            ("uniswap_v3", ["wbtc", "weth", "usdc"]),
-            ("quickswap_v2", ["wbtc", "weth", "usdc"]),
-        ],
-        "stmatic": [
-            ("kyberswap", ["stmatic", "usdc"]),
-            ("uniswap_v3", ["stmatic", "wmatic", "usdc"]),
-            ("quickswap_v2", ["stmatic", "wmatic", "usdc"]),
-        ],
-        "bal": [
-            ("kyberswap", ["bal", "usdc"]),
-            ("quickswap_v2", ["bal", "wmatic", "usdc"]),
-            ("uniswap_v3", ["bal", "usdc"]),
-            ("uniswap_v3", ["bal", "weth", "usdc"]),
-        ],
-        "default": [
-            ("kyberswap", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "weth", "usdc"]),
-            ("quickswap_v2", ["{token}", "wmatic", "usdc"]),
-            ("quickswap_v2", ["{token}", "weth", "usdc"]),
-            ("uniswap_v3", ["{token}", "wmatic", "usdc"]),
-            ("quickswap_v2", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "dai", "usdc"]),
-        ],
+        "default": [("kyberswap", ["{token}", "usdc"])],
     },
     "optimism": {
-        "eth": [("kyberswap", ["eth", "usdc"]), ("uniswap_v3", ["weth", "usdc"])],
-        "dai": [("kyberswap", ["dai", "usdc"]), ("uniswap_v3", ["dai", "usdc"])],
-        "usdc": [("kyberswap", ["usdc", "usdc"]), ("uniswap_v3", ["usdc"])],
-        "weth": [("kyberswap", ["weth", "usdc"]), ("uniswap_v3", ["weth", "usdc"])],
-        "op": [("kyberswap", ["op", "usdc"]), ("uniswap_v3", ["op", "weth", "usdc"])],
-        "default": [
-            ("kyberswap", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "weth", "usdc"]),
-            ("uniswap_v3", ["{token}", "dai", "usdc"]),
-        ],
+        "default": [("kyberswap", ["{token}", "usdc"])],
     },
     "ethereum": {
-        "eth": [("kyberswap", ["eth", "usdc"])],
-        "dai": [("kyberswap", ["dai", "usdc"]), ("uniswap_v3", ["dai", "usdc"])],
-        "usdc": [("kyberswap", ["usdc", "usdc"]), ("uniswap_v3", ["usdc"])],
-        "wbtc": [("kyberswap", ["wbtc", "usdc"])],
-        "wsteth": [("kyberswap", ["wsteth", "usdc"])],
-        "wtau": [("kyberswap", ["wtau", "usdc"])],
-        "default": [
-            ("kyberswap", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "usdc"]),
-            ("uniswap_v3", ["{token}", "weth", "usdc"]),
-            ("uniswap_v3", ["{token}", "dai", "usdc"]),
-        ],
+        "default": [("kyberswap", ["{token}", "usdc"])],
     },
     "arbitrum": {
-        "eth": [("kyberswap", ["eth", "usdc"])],
-        "usdc": [("kyberswap", ["usdc", "usdc"])],
         "default": [("kyberswap", ["{token}", "usdc"])],
     },
 }
@@ -96,8 +35,8 @@ VALUE_PATHS = {
 TRACKED_TOKENS = {
     "polygon": ["pol", "aave", "link", "ghst", "bal"],
     "optimism": ["eth", "velo"],
-    "ethereum": ["eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
-    "arbitrum": ["eth"],
+    "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
+    "arbitrum": ["aarb", "eth"],
 }
 
 
@@ -115,10 +54,6 @@ def quote_path(blockchain_access, venue, path, input_quantity):
         if len(path) != 2:
             return 0
         return blockchain_access.check_kyberswap_price(path, input_quantity)
-    if venue == "uniswap_v3":
-        return blockchain_access.check_uniswap_price_path(path, input_quantity)
-    if venue == "quickswap_v2":
-        return blockchain_access.check_quickswap_v2_price_path(path, input_quantity)
     raise ValueError(f"Unknown venue: {venue}")
 
 

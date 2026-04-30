@@ -3,20 +3,6 @@ networks:
     rpc_url: "https://polygon.drpc.org"
     chain_id: 137
     contracts:
-      quickswap_v2:
-        router:
-          address: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
-        factory:
-          address: "0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32"
-      uniswap_v3:
-        factory:
-          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
-        quoter:
-          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
-      swaps:
-        quickswap: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
-        apeswap: "0x9E31215F6421c4EED2c04116d430CaF30999680d"
-        sushiswap: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
       erc20:
         pol:
           address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -74,11 +60,6 @@ networks:
     rpc_url: "https://mainnet.optimism.io"
     chain_id: 10
     contracts:
-      uniswap_v3:
-        factory:
-          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
-        quoter:
-          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
       erc20:
         eth:
           address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -112,11 +93,6 @@ networks:
     rpc_url: "https://eth.drpc.org"
     chain_id: 1
     contracts:
-      uniswap_v3:
-        factory:
-          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
-        quoter:
-          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
       erc20:
         eth:
           address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -127,6 +103,9 @@ networks:
           decimals: "ether"
         dai:
           address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+          decimals: "ether"
+        adai:
+          address: "0x018008bfb33d285247A21d44E50697654f754e63"
           decimals: "ether"
         usdc:
           address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
@@ -144,14 +123,9 @@ networks:
           address: "0x77E06c9eCCf2E797fd462A92B6D7642EF85b0A44"
           decimals: "gwei"
   arbitrum:
-    rpc_url: "https://arbitrum.drpc.org"
+    rpc_url: "https://arb1.arbitrum.io/rpc"
     chain_id: 42161
     contracts:
-      uniswap_v3:
-        factory:
-          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
-        quoter:
-          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
       erc20:
         eth:
           address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -159,6 +133,9 @@ networks:
           native: true
         weth:
           address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+          decimals: "ether"
+        aarb:
+          address: "0x6533afac2E7BCCB20dca161449A13A32D391fb00"
           decimals: "ether"
         usdc:
           address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
