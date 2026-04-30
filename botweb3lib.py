@@ -1,3 +1,4 @@
+from decimal import Decimal
 import json
 import requests
 import yaml
@@ -107,10 +108,9 @@ class BlockchainAccess:
 
     @classmethod
     def my_toWei(cls, quantity, unit):
-        wei = Web3.to_wei(quantity, unit)
         if unit == "lovelace":
-            return wei * 100
-        return wei
+            return int(Decimal(str(quantity)) * (10**8))
+        return Web3.to_wei(quantity, unit)
 
     @classmethod
     def my_fromWei(cls, wei, unit):
