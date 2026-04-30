@@ -1,6 +1,22 @@
 import json
+import requests
 import yaml
 from web3 import Web3
+
+NATIVE_TOKEN_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+
+QUICKSWAP_V2_FACTORY_ABI = [
+    {
+        "inputs": [
+            {"internalType": "address", "name": "tokenA", "type": "address"},
+            {"internalType": "address", "name": "tokenB", "type": "address"},
+        ],
+        "name": "getPair",
+        "outputs": [{"internalType": "address", "name": "pair", "type": "address"}],
+        "stateMutability": "view",
+        "type": "function",
+    }
+]
 
 UNISWAP_V3_FACTORY_ABI = [
     {
@@ -62,6 +78,13 @@ UNISWAP_V3_FEE_TIERS = (500, 3000, 10000)
 class BlockchainAccess:
 
     _config = None
+    _abi_cache = {}
+    _kyberswap_chain_names = {
+        "polygon": "polygon",
+        "optimism": "optimism",
+        "ethereum": "ethereum",
+        "arbitrum": "arbitrum",
+    }
 
     @classmethod
     def load_config(cls, config_path="chains.config.yaml"):
@@ -98,8 +121,17 @@ class BlockchainAccess:
     def get_chain_id(self):
         return self.get_config()["chain_id"]
 
+    def get_kyberswap_chain_name(self):
+        if self._chain not in BlockchainAccess._kyberswap_chain_names:
+            raise KeyError(f"KyberSwap chain not configured for {self._chain}")
+        return BlockchainAccess._kyberswap_chain_names[self._chain]
+
     def get_decimals(self, token):
         return self.get_config()["contracts"]["erc20"][token]["decimals"]
+
+    def is_native_token(self, token):
+        token_info = self.get_config()["contracts"]["erc20"][token]
+        return token_info.get("native", False)
 
     def get_all_tokens(self):
         return self.get_config()["contracts"]["erc20"].keys()
@@ -117,9 +149,14 @@ class BlockchainAccess:
         contract_info = contract_group[name]
 
         if isinstance(contract_info, dict):
-            return contract_info["address"]
+            address = contract_info["address"]
+        else:
+            address = contract_info
 
-        return contract_info
+        if address == NATIVE_TOKEN_ADDRESS:
+            return address
+
+        return Web3.to_checksum_address(address)
 
     def get_token_contract_address(self, token):
         return self.get_contract_address("erc20", token)
@@ -162,20 +199,38 @@ class BlockchainAccess:
             self._contract[cache_key] = self.get_w3().eth.contract(address=address, abi=abi)
         return self._contract[cache_key]
 
+    @classmethod
+    def _load_abi_result(cls, abi_path):
+        if abi_path not in cls._abi_cache:
+            with open(abi_path) as f:
+                abi_json = json.load(f)
+
+            abi_result = abi_json["result"]
+            if isinstance(abi_result, str):
+                abi_result = json.loads(abi_result)
+
+            cls._abi_cache[abi_path] = abi_result
+
+        return cls._abi_cache[abi_path]
+
     def init_token_contract(self, token):
+        if self.is_native_token(token):
+            return
+
         if token in self._contract:
             return
 
-        with open("abi/erc20.abi.json") as f:
-            info_json = json.load(f)
-
-        abi = info_json["result"]
+        abi = BlockchainAccess._load_abi_result("abi/erc20.abi.json")
 
         self._contract[token] = self.get_w3().eth.contract(
             address=self.get_token_contract_address(token), abi=abi
         )
 
     def check_balance_token(self, token, wallet):
+        if self.is_native_token(token):
+            balance_wei = self.get_w3().eth.get_balance(wallet)
+            return BlockchainAccess.my_fromWei(balance_wei, self.get_decimals(token))
+
         self.init_token_contract(token)
 
         balance_wei = self._contract[token].functions.balanceOf(wallet).call()
@@ -285,6 +340,101 @@ class BlockchainAccess:
                 return 0
 
         return output_quantity
+
+    def get_quickswap_v2_factory(self):
+        return self._get_cached_contract(
+            "quickswap_v2_factory",
+            self.get_dex_contract_address("quickswap_v2", "factory"),
+            QUICKSWAP_V2_FACTORY_ABI,
+        )
+
+    def get_quickswap_v2_router(self):
+        return self._get_cached_contract(
+            "quickswap_v2_router",
+            self.get_dex_contract_address("quickswap_v2", "router"),
+            BlockchainAccess._load_abi_result("abi/quickswap.abi.json"),
+        )
+
+    def get_quickswap_v2_pair_address(self, token_in, token_out):
+        token_in_address = self.get_token_contract_address(token_in)
+        token_out_address = self.get_token_contract_address(token_out)
+        return self.get_quickswap_v2_factory().functions.getPair(
+            token_in_address, token_out_address
+        ).call()
+
+    def check_quickswap_v2_price_path(self, path, input_quantity):
+        if len(path) < 2:
+            return input_quantity
+
+        input_quantity_wei = BlockchainAccess.my_toWei(
+            input_quantity, self.get_decimals(path[0])
+        )
+
+        if input_quantity_wei == 0:
+            return 0
+
+        for from_token, to_token in zip(path, path[1:]):
+            pair_address = self.get_quickswap_v2_pair_address(from_token, to_token)
+            if int(pair_address, 16) == 0:
+                return 0
+
+        token_addresses = [self.get_token_contract_address(token) for token in path]
+
+        try:
+            output_amounts = self.get_quickswap_v2_router().functions.getAmountsOut(
+                input_quantity_wei, token_addresses
+            ).call()
+            output_quantity = BlockchainAccess.my_fromWei(
+                output_amounts[-1], self.get_decimals(path[-1])
+            )
+
+            if output_quantity > 0:
+                print("quickswap_v2:", input_quantity, path[0], "->", output_quantity, path[-1])
+
+            return output_quantity
+        except Exception:
+            return 0
+
+    def check_kyberswap_price(self, pair, input_quantity, client_id="w3-silver-bots"):
+        from_token = pair[0]
+        to_token = pair[1]
+
+        if from_token == to_token:
+            return input_quantity
+
+        input_quantity_wei = BlockchainAccess.my_toWei(
+            input_quantity, self.get_decimals(from_token)
+        )
+
+        if input_quantity_wei == 0:
+            return 0
+
+        url = (
+            "https://aggregator-api.kyberswap.com/"
+            f"{self.get_kyberswap_chain_name()}/api/v1/routes"
+        )
+        params = {
+            "tokenIn": self.get_token_contract_address(from_token),
+            "tokenOut": self.get_token_contract_address(to_token),
+            "amountIn": str(input_quantity_wei),
+        }
+        headers = {"x-client-id": client_id}
+
+        try:
+            response = requests.get(url, params=params, headers=headers, timeout=20)
+            response.raise_for_status()
+            route_json = response.json()
+            output_quantity_wei = int(route_json["data"]["routeSummary"]["amountOut"])
+            output_quantity = BlockchainAccess.my_fromWei(
+                output_quantity_wei, self.get_decimals(to_token)
+            )
+
+            if output_quantity > 0:
+                print("kyberswap:", input_quantity, from_token, "->", output_quantity, to_token)
+
+            return output_quantity
+        except Exception:
+            return 0
 
 ##################################################
 # Not used, nor refactored into BlockchainAccess #

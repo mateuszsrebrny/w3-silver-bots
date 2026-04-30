@@ -3,6 +3,11 @@ networks:
     rpc_url: "https://polygon.drpc.org"
     chain_id: 137
     contracts:
+      quickswap_v2:
+        router:
+          address: "0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff"
+        factory:
+          address: "0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32"
       uniswap_v3:
         factory:
           address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
@@ -13,6 +18,10 @@ networks:
         apeswap: "0x9E31215F6421c4EED2c04116d430CaF30999680d"
         sushiswap: "0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506"
       erc20:
+        pol:
+          address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          decimals: "ether"
+          native: true
         weth:
           address: "0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619"
           decimals: "ether"
@@ -31,11 +40,11 @@ networks:
         wmatic:
           address: "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270"
           decimals: "ether"
-        glm:
-          address: "0x0B220b82F3eA3B7F6d9A1D8ab58930C064A2b5Bf"
-          decimals: "ether"
         link:
           address: "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39"
+          decimals: "ether"
+        ghst:
+          address: "0x385Eeac5cB85A38A9a07A70c73e0a3271CfB54A7"
           decimals: "ether"
         sand:
           address: "0xBbba073C31bF03b8ACf7c28EF0738DeCF3695683"
@@ -71,6 +80,10 @@ networks:
         quoter:
           address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
       erc20:
+        eth:
+          address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          decimals: "ether"
+          native: true
         op: 
           address: "0x4200000000000000000000000000000000000042"
           decimals: "ether"
@@ -92,3 +105,61 @@ networks:
         ldo:
           address: "0xFdb794692724153d1488CcdBE0C56c252596735F"
           decimals: "ether"
+        velo:
+          address: "0x9560e827af36c94d2ac33a39bce1fe78631088db"
+          decimals: "ether"
+  ethereum:
+    rpc_url: "https://eth.drpc.org"
+    chain_id: 1
+    contracts:
+      uniswap_v3:
+        factory:
+          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
+        quoter:
+          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
+      erc20:
+        eth:
+          address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          decimals: "ether"
+          native: true
+        weth:
+          address: "0xC02aaA39b223FE8D0A0E5C4F27eAD9083C756Cc2"
+          decimals: "ether"
+        dai:
+          address: "0x6B175474E89094C44Da98b954EedeAC495271d0F"
+          decimals: "ether"
+        usdc:
+          address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+          decimals: "mwei"
+        wbtc:
+          address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+          decimals: "lovelace"
+        glm:
+          address: "0x7DD9c5Cba05E151C895FDe1CF355C9A1D5DA6429"
+          decimals: "ether"
+        wsteth:
+          address: "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0"
+          decimals: "ether"
+        wtau:
+          address: "0x77E06c9eCCf2E797fd462A92B6D7642EF85b0A44"
+          decimals: "gwei"
+  arbitrum:
+    rpc_url: "https://arbitrum.drpc.org"
+    chain_id: 42161
+    contracts:
+      uniswap_v3:
+        factory:
+          address: "0x1F98431c8aD98523631AE4a59f267346ea31F984"
+        quoter:
+          address: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e"
+      erc20:
+        eth:
+          address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+          decimals: "ether"
+          native: true
+        weth:
+          address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
+          decimals: "ether"
+        usdc:
+          address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
+          decimals: "mwei"

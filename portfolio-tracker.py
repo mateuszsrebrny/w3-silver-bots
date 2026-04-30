@@ -19,37 +19,107 @@ BlockchainAccess.load_config()
 
 VALUE_PATHS = {
     "polygon": {
-        "dai": [["dai", "usdc"]],
-        "usdc": [["usdc"]],
-        "weth": [["weth", "usdc"]],
-        "wmatic": [["wmatic", "usdc"]],
-        "wbtc": [["wbtc", "weth", "usdc"]],
-        "stmatic": [["stmatic", "wmatic", "usdc"]],
+        "pol": [("kyberswap", ["pol", "usdc"])],
+        "dai": [("kyberswap", ["dai", "usdc"]), ("uniswap_v3", ["dai", "usdc"])],
+        "usdc": [("kyberswap", ["usdc", "usdc"]), ("uniswap_v3", ["usdc"])],
+        "weth": [
+            ("kyberswap", ["weth", "usdc"]),
+            ("uniswap_v3", ["weth", "usdc"]),
+            ("quickswap_v2", ["weth", "usdc"]),
+        ],
+        "wmatic": [
+            ("kyberswap", ["wmatic", "usdc"]),
+            ("uniswap_v3", ["wmatic", "usdc"]),
+            ("quickswap_v2", ["wmatic", "usdc"]),
+        ],
+        "wbtc": [
+            ("kyberswap", ["wbtc", "usdc"]),
+            ("uniswap_v3", ["wbtc", "weth", "usdc"]),
+            ("quickswap_v2", ["wbtc", "weth", "usdc"]),
+        ],
+        "stmatic": [
+            ("kyberswap", ["stmatic", "usdc"]),
+            ("uniswap_v3", ["stmatic", "wmatic", "usdc"]),
+            ("quickswap_v2", ["stmatic", "wmatic", "usdc"]),
+        ],
+        "bal": [
+            ("kyberswap", ["bal", "usdc"]),
+            ("quickswap_v2", ["bal", "wmatic", "usdc"]),
+            ("uniswap_v3", ["bal", "usdc"]),
+            ("uniswap_v3", ["bal", "weth", "usdc"]),
+        ],
         "default": [
-            ["{token}", "usdc"],
-            ["{token}", "weth", "usdc"],
-            ["{token}", "wmatic", "usdc"],
-            ["{token}", "dai", "usdc"],
+            ("kyberswap", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "weth", "usdc"]),
+            ("quickswap_v2", ["{token}", "wmatic", "usdc"]),
+            ("quickswap_v2", ["{token}", "weth", "usdc"]),
+            ("uniswap_v3", ["{token}", "wmatic", "usdc"]),
+            ("quickswap_v2", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "dai", "usdc"]),
         ],
     },
     "optimism": {
-        "dai": [["dai", "usdc"]],
-        "usdc": [["usdc"]],
-        "weth": [["weth", "usdc"]],
-        "op": [["op", "weth", "usdc"]],
+        "eth": [("kyberswap", ["eth", "usdc"]), ("uniswap_v3", ["weth", "usdc"])],
+        "dai": [("kyberswap", ["dai", "usdc"]), ("uniswap_v3", ["dai", "usdc"])],
+        "usdc": [("kyberswap", ["usdc", "usdc"]), ("uniswap_v3", ["usdc"])],
+        "weth": [("kyberswap", ["weth", "usdc"]), ("uniswap_v3", ["weth", "usdc"])],
+        "op": [("kyberswap", ["op", "usdc"]), ("uniswap_v3", ["op", "weth", "usdc"])],
         "default": [
-            ["{token}", "usdc"],
-            ["{token}", "weth", "usdc"],
-            ["{token}", "dai", "usdc"],
+            ("kyberswap", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "weth", "usdc"]),
+            ("uniswap_v3", ["{token}", "dai", "usdc"]),
         ],
     },
+    "ethereum": {
+        "eth": [("kyberswap", ["eth", "usdc"])],
+        "dai": [("kyberswap", ["dai", "usdc"]), ("uniswap_v3", ["dai", "usdc"])],
+        "usdc": [("kyberswap", ["usdc", "usdc"]), ("uniswap_v3", ["usdc"])],
+        "wbtc": [("kyberswap", ["wbtc", "usdc"])],
+        "wsteth": [("kyberswap", ["wsteth", "usdc"])],
+        "wtau": [("kyberswap", ["wtau", "usdc"])],
+        "default": [
+            ("kyberswap", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "usdc"]),
+            ("uniswap_v3", ["{token}", "weth", "usdc"]),
+            ("uniswap_v3", ["{token}", "dai", "usdc"]),
+        ],
+    },
+    "arbitrum": {
+        "eth": [("kyberswap", ["eth", "usdc"])],
+        "usdc": [("kyberswap", ["usdc", "usdc"])],
+        "default": [("kyberswap", ["{token}", "usdc"])],
+    },
+}
+
+TRACKED_TOKENS = {
+    "polygon": ["pol", "aave", "link", "ghst", "bal"],
+    "optimism": ["eth", "velo"],
+    "ethereum": ["eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
+    "arbitrum": ["eth"],
 }
 
 
 def get_value_paths(chain, token_name):
     chain_paths = VALUE_PATHS[chain]
     template_paths = chain_paths.get(token_name, chain_paths["default"])
-    return [[step.format(token=token_name) for step in path] for path in template_paths]
+    return [
+        (venue, [step.format(token=token_name) for step in path])
+        for venue, path in template_paths
+    ]
+
+
+def quote_path(blockchain_access, venue, path, input_quantity):
+    if venue == "kyberswap":
+        if len(path) != 2:
+            return 0
+        return blockchain_access.check_kyberswap_price(path, input_quantity)
+    if venue == "uniswap_v3":
+        return blockchain_access.check_uniswap_price_path(path, input_quantity)
+    if venue == "quickswap_v2":
+        return blockchain_access.check_quickswap_v2_price_path(path, input_quantity)
+    raise ValueError(f"Unknown venue: {venue}")
 
 
 class TokenBalance:
@@ -70,8 +140,8 @@ class TokenBalance:
             self._blockchain_access.get_chain(), self.token_name
         )
 
-        for path in candidate_paths:
-            value = self._blockchain_access.check_uniswap_price_path(path, self.balance)
+        for venue, path in candidate_paths:
+            value = quote_path(self._blockchain_access, venue, path, self.balance)
             if value > 0 or len(path) == 1:
                 return value
 
@@ -98,10 +168,10 @@ def print_balances(chain):
 
 
 # Iterate over supported chains
-for chain in ["polygon", "optimism"]:
+for chain in ["polygon", "optimism", "ethereum", "arbitrum"]:
     blockchain_access = BlockchainAccess(chain, dry_run)
 
-    tokens = blockchain_access.get_all_tokens()
+    tokens = TRACKED_TOKENS[chain]
 
     balances += [TokenBalance(blockchain_access, token, wallet) for token in tokens]
 
