@@ -84,5 +84,17 @@ class PriceSeries:
 
         return (current_close / lookback_close) - Decimal("1")
 
+    def drawdown_from_high(self, timestamp, window_days):
+        index = self._index_by_timestamp.get(timestamp)
+        if index is None:
+            return None
+
+        window_start = max(0, index - window_days + 1)
+        window_high = max(self._closes[window_start : index + 1])
+        if window_high == 0:
+            return None
+
+        return Decimal("1") - (self._closes[index] / window_high)
+
     def latest_close(self):
         return self._candles[-1].close

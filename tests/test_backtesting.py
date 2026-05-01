@@ -5,9 +5,22 @@ from backtesting.engine import BacktestEngine
 from backtesting.multi_asset import MultiAssetSeries
 from backtesting.reporting import format_results_markdown, format_results_table, write_results_csv
 from backtesting.rotation_engine import RotationBacktestEngine
-from backtesting.rotation_strategies import BTCOnlyWeekly, BuyStrongerReturnWeekly, EqualSplitWeekly
+from backtesting.rotation_strategies import (
+    BTCCoreETHOverlay,
+    BTCOnlyWeekly,
+    BuyETHBelowMAOtherwiseBTC,
+    BuyFurtherBelowMAWeekly,
+    BuyStrongerReturnWeekly,
+    EqualSplitWeekly,
+)
 from backtesting.series import PriceSeries
-from backtesting.strategies import WeeklyDipDCA, WeeklyFixedDCA, WeeklyMATrendDCA
+from backtesting.strategies import (
+    WeeklyDipDCA,
+    WeeklyDrawdownScaledDCA,
+    WeeklyFixedDCA,
+    WeeklyMAScaledDCA,
+    WeeklyMATrendDCA,
+)
 from market_data.candles import Candle
 
 
@@ -99,6 +112,30 @@ def test_fixed_dca_can_run_every_3_days():
     assert result.trade_count == 4
     assert result.total_contributed == Decimal("400")
     assert result.contribution_interval == "3d"
+
+
+def test_ma_scaled_dca_buys_more_below_ma_and_less_above():
+    series = make_series([100] * 10 + [80] + [120])
+    strategy = WeeklyMAScaledDCA("100", window_days=5, below_multiplier="2", above_multiplier="0.5")
+
+    below_decision = strategy.decide(series.candles()[10], series, None)
+    above_decision = strategy.decide(series.candles()[11], series, None)
+
+    assert below_decision.buy_usd == Decimal("200")
+    assert above_decision.buy_usd == Decimal("50.0")
+
+
+def test_drawdown_scaled_dca_buys_more_on_deeper_drawdown():
+    series = make_series([100, 105, 110, 95, 80, 120])
+    strategy = WeeklyDrawdownScaledDCA("100", lookback_days=5)
+
+    mild = strategy.decide(series.candles()[3], series, None)
+    deep = strategy.decide(series.candles()[4], series, None)
+    near_high = strategy.decide(series.candles()[5], series, None)
+
+    assert mild.buy_usd == Decimal("150.0")
+    assert deep.buy_usd == Decimal("200.0")
+    assert near_high.buy_usd == Decimal("50.0")
 
 
 def test_results_table_contains_strategy_names():
@@ -197,3 +234,36 @@ def test_buy_stronger_return_prefers_outperformer():
     decision = strategy.decide(datetime(2024, 1, 21, tzinfo=UTC), bundle, None)
 
     assert decision.weights == {"ETH-USD": Decimal("1")}
+
+
+def test_buy_further_below_ma_prefers_deeper_discount():
+    btc = make_series([100] * 10 + [90], product_id="BTC-USD")
+    eth = make_series([100] * 10 + [80], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = BuyFurtherBelowMAWeekly(window_days=5)
+
+    decision = strategy.decide(datetime(2024, 1, 11, tzinfo=UTC), bundle, None)
+
+    assert decision.weights == {"ETH-USD": Decimal("1")}
+
+
+def test_buy_eth_below_ma_otherwise_btc_prefers_eth_discount():
+    btc = make_series([100] * 10 + [110], product_id="BTC-USD")
+    eth = make_series([100] * 10 + [80], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = BuyETHBelowMAOtherwiseBTC(window_days=5)
+
+    decision = strategy.decide(datetime(2024, 1, 11, tzinfo=UTC), bundle, None)
+
+    assert decision.weights == {"ETH-USD": Decimal("1")}
+
+
+def test_btc_core_eth_overlay_adds_eth_only_when_strong():
+    btc = make_series([100 + day for day in range(120)], product_id="BTC-USD")
+    eth = make_series([100 + (day * 2) for day in range(120)], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = BTCCoreETHOverlay(ma_window_days=20, return_window_days=28, eth_weight="0.30")
+
+    decision = strategy.decide(datetime(2024, 4, 29, tzinfo=UTC), bundle, None)
+
+    assert decision.weights == {"BTC-USD": Decimal("0.70"), "ETH-USD": Decimal("0.30")}

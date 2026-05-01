@@ -23,6 +23,10 @@ from backtesting.reporting import (
 from backtesting.rotation_engine import RotationBacktestEngine
 from backtesting.rotation_strategies import (
     BTCOnlyWeekly,
+    BTCCoreETHOverlay,
+    BuyBTCBelowMAOtherwiseETH,
+    BuyETHBelowMAOtherwiseBTC,
+    BuyFurtherBelowMAWeekly,
     BuyStrongerReturnWeekly,
     BuyWeakerReturnWeekly,
     ETHOnlyWeekly,
@@ -30,7 +34,13 @@ from backtesting.rotation_strategies import (
     RiskOnETHRiskOffBTC,
 )
 from backtesting.series import PriceSeries
-from backtesting.strategies import WeeklyDipDCA, WeeklyFixedDCA, WeeklyMATrendDCA
+from backtesting.strategies import (
+    WeeklyDipDCA,
+    WeeklyDrawdownScaledDCA,
+    WeeklyFixedDCA,
+    WeeklyMAScaledDCA,
+    WeeklyMATrendDCA,
+)
 
 
 UTC = timezone.utc
@@ -89,6 +99,13 @@ def build_strategies(weekly_amount, ma_window):
         WeeklyFixedDCA(weekly_amount),
         WeeklyMATrendDCA(weekly_amount, window_days=ma_window),
         WeeklyDipDCA(weekly_amount, window_days=ma_window),
+        WeeklyMAScaledDCA(weekly_amount, window_days=ma_window),
+    ]
+
+
+def build_ma_independent_strategies(weekly_amount):
+    return [
+        WeeklyDrawdownScaledDCA(weekly_amount),
     ]
 
 
@@ -98,6 +115,10 @@ def build_dual_asset_strategies(return_windows):
         ETHOnlyWeekly(),
         EqualSplitWeekly(),
         RiskOnETHRiskOffBTC(window_days=50),
+        BuyFurtherBelowMAWeekly(window_days=50),
+        BuyETHBelowMAOtherwiseBTC(window_days=50),
+        BuyBTCBelowMAOtherwiseETH(window_days=50),
+        BTCCoreETHOverlay(ma_window_days=50, return_window_days=84, eth_weight="0.30"),
     ]
     for window_days in return_windows:
         strategies.append(BuyStrongerReturnWeekly(window_days))
@@ -157,6 +178,13 @@ def run_experiment_matrix(symbols, since_dates, weekly_amount, ma_windows, inter
                         data_root=data_root,
                     )
                     all_results.extend(ma_results[1:])
+
+                series = build_series(symbol, data_root)
+                engine = BacktestEngine(weekly_amount, interval_days=interval_days)
+                all_results.extend(
+                    engine.run(series, strategy, since)
+                    for strategy in build_ma_independent_strategies(weekly_amount)
+                )
     return all_results
 
 

@@ -116,6 +116,18 @@ def test_run_experiment_matrix_runs_fixed_once_per_symbol_since(monkeypatch):
         return [f"fixed-{symbol}-{since.date()}-{interval_days}", f"trend-{ma_window}-{interval_days}", f"dip-{ma_window}-{interval_days}"]
 
     monkeypatch.setattr(run_backtest, "run_backtests", fake_run_backtests)
+    monkeypatch.setattr(run_backtest, "build_series", lambda symbol, data_root: "series")
+
+    class FakeEngine:
+        def __init__(self, weekly_amount, interval_days):
+            self.weekly_amount = weekly_amount
+            self.interval_days = interval_days
+
+        def run(self, series, strategy, since):
+            return f"drawdown-{self.interval_days}"
+
+    monkeypatch.setattr(run_backtest, "BacktestEngine", FakeEngine)
+    monkeypatch.setattr(run_backtest, "build_ma_independent_strategies", lambda weekly_amount: ["drawdown"])
 
     results = run_backtest.run_experiment_matrix(
         symbols=["BTC-USD"],
@@ -132,11 +144,13 @@ def test_run_experiment_matrix_runs_fixed_once_per_symbol_since(monkeypatch):
         "dip-20-1",
         "trend-50-1",
         "dip-50-1",
+        "drawdown-1",
         "fixed-BTC-USD-2021-01-01-3",
         "trend-20-3",
         "dip-20-3",
         "trend-50-3",
         "dip-50-3",
+        "drawdown-3",
     ]
     assert calls == [
         ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, 1, "data-root"),
