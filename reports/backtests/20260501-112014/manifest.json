@@ -1,0 +1,31 @@
+{
+  "data_files": {
+    "BTC-USD": "data/market/coinbase/BTC-USD-1d.csv",
+    "ETH-USD": "data/market/coinbase/ETH-USD-1d.csv"
+  },
+  "data_root": "data/market/coinbase",
+  "dual_asset_return_windows": [
+    28,
+    84
+  ],
+  "generated_at_utc": "2026-05-01T11:20:14Z",
+  "git_commit": "b69e55f",
+  "since_dates": [
+    "2020-01-01",
+    "2021-01-01",
+    "2022-01-01",
+    "2023-01-01"
+  ],
+  "single_asset_ma_windows": [
+    20,
+    50,
+    100,
+    200
+  ],
+  "strategy_set": "all",
+  "symbols": [
+    "BTC-USD",
+    "ETH-USD"
+  ],
+  "weekly_amount_usd": "100"
+}
