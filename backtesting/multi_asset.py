@@ -43,5 +43,8 @@ class MultiAssetSeries:
     def trailing_return(self, symbol, timestamp, window_days):
         return self.series_by_symbol[symbol].trailing_return(timestamp, window_days)
 
+    def drawdown_from_high(self, symbol, timestamp, window_days):
+        return self.series_by_symbol[symbol].drawdown_from_high(timestamp, window_days)
+
     def symbol_label(self):
         return "+".join(self.symbols())

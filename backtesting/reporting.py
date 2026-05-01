@@ -8,6 +8,30 @@ def quantize_money(value):
 
 
 def result_to_row(result):
+    if hasattr(result, "gross_buys_dai"):
+        return {
+            "strategy": result.strategy_name,
+            "strategy_label": result.strategy_label,
+            "symbol": result.symbol,
+            "contribution_interval": result.contribution_interval,
+            "start": result.start_timestamp.date().isoformat(),
+            "end": result.end_timestamp.date().isoformat(),
+            "initial_value_usd": str(quantize_money(result.initial_value)),
+            "gross_buys_usd": str(quantize_money(result.gross_buys_dai)),
+            "gross_sells_usd": str(quantize_money(result.gross_sells_dai)),
+            "net_buys_usd": str(quantize_money(result.net_buys_dai)),
+            "withdrawn_dai_usd": str(quantize_money(result.total_withdrawn_dai)),
+            "ending_dai_usd": str(quantize_money(result.ending_dai)),
+            "ending_btc_units": str(result.ending_btc_units.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)),
+            "ending_eth_units": str(result.ending_eth_units.quantize(Decimal("0.00000001"), rounding=ROUND_HALF_UP)),
+            "ending_value_usd": str(quantize_money(result.ending_value)),
+            "realized_value_usd": str(quantize_money(result.realized_value)),
+            "return_pct": str(quantize_money(result.total_return_pct)),
+            "turnover_pct": str(quantize_money(result.turnover_pct)),
+            "max_drawdown_pct": str(quantize_money(result.max_drawdown_pct)),
+            "trade_count": str(result.trade_count),
+        }
+
     return {
         "strategy": result.strategy_name,
         "strategy_label": result.strategy_label,
@@ -28,22 +52,7 @@ def result_to_row(result):
 
 def format_results_table(results):
     rows = [result_to_row(result) for result in results]
-    headers = [
-        "strategy",
-        "strategy_label",
-        "symbol",
-        "contribution_interval",
-        "start",
-        "end",
-        "contributed_usd",
-        "invested_usd",
-        "ending_cash_usd",
-        "ending_value_usd",
-        "return_pct",
-        "deployment_pct",
-        "max_drawdown_pct",
-        "trade_count",
-    ]
+    headers = list(rows[0].keys())
 
     widths = {
         header: max(len(header), *(len(row[header]) for row in rows))
