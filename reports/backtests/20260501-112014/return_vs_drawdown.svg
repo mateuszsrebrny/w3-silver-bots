@@ -1,0 +1,142 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">
+<rect width="1200" height="800" fill="#f8fafc"/>
+<text x="600.0" y="40" text-anchor="middle" font-family="monospace" font-size="24" fill="#0f172a">Return vs Max Drawdown</text>
+<line x1="80" y1="720" x2="1120" y2="720" stroke="#334155" stroke-width="2"/>
+<line x1="80" y1="80" x2="80" y2="720" stroke="#334155" stroke-width="2"/>
+<line x1="80.0" y1="720" x2="80.0" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+<text x="80.0" y="744" text-anchor="middle" font-family="monospace" font-size="12" fill="#475569">11.24</text>
+<line x1="80" y1="720.0" x2="1120" y2="720.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="68" y="724.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">-3.61</text>
+<line x1="288.0" y1="720" x2="288.0" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+<text x="288.0" y="744" text-anchor="middle" font-family="monospace" font-size="12" fill="#475569">24.08</text>
+<line x1="80" y1="592.0" x2="1120" y2="592.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="68" y="596.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">34.30</text>
+<line x1="495.9999999999999" y1="720" x2="495.9999999999999" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+<text x="495.9999999999999" y="744" text-anchor="middle" font-family="monospace" font-size="12" fill="#475569">36.93</text>
+<line x1="80" y1="464.0" x2="1120" y2="464.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="68" y="468.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">72.21</text>
+<line x1="704.0" y1="720" x2="704.0" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+<text x="704.0" y="744" text-anchor="middle" font-family="monospace" font-size="12" fill="#475569">49.77</text>
+<line x1="80" y1="335.99999999999994" x2="1120" y2="335.99999999999994" stroke="#cbd5e1" stroke-width="1"/>
+<text x="68" y="339.99999999999994" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">110.13</text>
+<line x1="911.9999999999999" y1="720" x2="911.9999999999999" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+<text x="911.9999999999999" y="744" text-anchor="middle" font-family="monospace" font-size="12" fill="#475569">62.62</text>
+<line x1="80" y1="208.00000000000006" x2="1120" y2="208.00000000000006" stroke="#cbd5e1" stroke-width="1"/>
+<text x="68" y="212.00000000000006" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">148.04</text>
+<line x1="1120.0" y1="720" x2="1120.0" y2="80" stroke="#cbd5e1" stroke-width="1"/>
+<text x="1120.0" y="744" text-anchor="middle" font-family="monospace" font-size="12" fill="#475569">75.46</text>
+<line x1="80" y1="80.0" x2="1120" y2="80.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="68" y="84.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">185.95</text>
+<text x="600.0" y="782" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">max_drawdown_pct</text>
+<text x="24" y="400.0" transform="rotate(-90 24,400.0)" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">return_pct</text>
+<circle cx="940" cy="70" r="6" fill="#0f766e"/>
+<text x="954" y="74" font-family="monospace" font-size="12" fill="#0f172a">BTC-USD</text>
+<circle cx="940" cy="94" r="6" fill="#2563eb"/>
+<text x="954" y="98" font-family="monospace" font-size="12" fill="#0f172a">ETH-USD</text>
+<circle cx="940" cy="118" r="6" fill="#b45309"/>
+<text x="954" y="122" font-family="monospace" font-size="12" fill="#0f172a">BTC-USD+ETH-USD</text>
+<circle cx="997.246963562753" cy="80.0" r="5" fill="#0f766e"><title>BTC-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2020-01-05</title></circle>
+<circle cx="742.0242914979757" cy="368.93859464021943" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2020-01-05</title></circle>
+<circle cx="494.251012145749" cy="445.8493353028065" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2020-01-05</title></circle>
+<circle cx="651.821862348178" cy="444.73517619751004" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2020-01-05</title></circle>
+<circle cx="561.7813765182186" cy="399.9662376028698" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2020-01-05</title></circle>
+<circle cx="728.5829959514169" cy="405.7733699092636" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2020-01-05</title></circle>
+<circle cx="394.65587044534414" cy="513.7792783287614" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2020-01-05</title></circle>
+<circle cx="580.5668016194331" cy="485.7227263135683" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2020-01-05</title></circle>
+<circle cx="344.45344129554655" cy="549.1285081240768" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2020-01-05</title></circle>
+<circle cx="641.9433198380566" cy="404.11901244988394" r="5" fill="#0f766e"><title>BTC-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2021-01-03</title></circle>
+<circle cx="417.8137651821862" cy="570.2300063304494" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2021-01-03</title></circle>
+<circle cx="412.95546558704456" cy="541.7007807554336" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2021-01-03</title></circle>
+<circle cx="401.2955465587044" cy="591.5678413167335" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2021-01-03</title></circle>
+<circle cx="427.3684210526315" cy="520.3967081662798" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2021-01-03</title></circle>
+<circle cx="423.80566801619426" cy="590.3523950200464" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2021-01-03</title></circle>
+<circle cx="407.9352226720648" cy="521.5783920658367" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2021-01-03</title></circle>
+<circle cx="446.96356275303634" cy="592.513188436379" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2021-01-03</title></circle>
+<circle cx="387.0445344129555" cy="519.4513610466344" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2021-01-03</title></circle>
+<circle cx="615.5465587044534" cy="391.2893015404094" r="5" fill="#0f766e"><title>BTC-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2022-01-02</title></circle>
+<circle cx="397.57085020242914" cy="568.6431736653302" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2022-01-02</title></circle>
+<circle cx="415.54655870445345" cy="530.4241401139482" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2022-01-02</title></circle>
+<circle cx="371.49797570850205" cy="596.1595273264402" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2022-01-02</title></circle>
+<circle cx="435.1417004048583" cy="502.90778645283814" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2022-01-02</title></circle>
+<circle cx="393.5222672064777" cy="594.9103186326229" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2022-01-02</title></circle>
+<circle cx="417.97570850202425" cy="504.1907575437856" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2022-01-02</title></circle>
+<circle cx="415.2226720647774" cy="599.6032918337203" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2022-01-02</title></circle>
+<circle cx="400.1619433198381" cy="499.4977843426883" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2022-01-02</title></circle>
+<circle cx="589.3117408906883" cy="513.0027431947668" r="5" fill="#0f766e"><title>BTC-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2023-01-01</title></circle>
+<circle cx="367.4493927125506" cy="608.8204262502638" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2023-01-01</title></circle>
+<circle cx="304.9392712550607" cy="611.9940915805022" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2023-01-01</title></circle>
+<circle cx="397.24696356275297" cy="598.1515087571217" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2023-01-01</title></circle>
+<circle cx="267.36842105263156" cy="622.6967714707745" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2023-01-01</title></circle>
+<circle cx="457.00404858299595" cy="570.8714918759232" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2023-01-01</title></circle>
+<circle cx="160.64777327935218" cy="649.9430259548428" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2023-01-01</title></circle>
+<circle cx="497.165991902834" cy="567.2589153829922" r="5" fill="#0f766e"><title>BTC-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2023-01-01</title></circle>
+<circle cx="80.0" cy="653.5556024477738" r="5" fill="#0f766e"><title>BTC-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2023-01-01</title></circle>
+<circle cx="1120.0" cy="232.7073222198776" r="5" fill="#2563eb"><title>ETH-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2020-01-05</title></circle>
+<circle cx="1003.2388663967611" cy="464.85756488710706" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2020-01-05</title></circle>
+<circle cx="885.1821862348179" cy="521.5783920658367" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2020-01-05</title></circle>
+<circle cx="1002.4291497975709" cy="476.9782654568474" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2020-01-05</title></circle>
+<circle cx="819.5951417004047" cy="552.7410846170078" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2020-01-05</title></circle>
+<circle cx="1022.8340080971658" cy="485.31757754800594" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2020-01-05</title></circle>
+<circle cx="445.99190283400816" cy="645.3175775480059" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2020-01-05</title></circle>
+<circle cx="937.48987854251" cy="598.1515087571217" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2020-01-05</title></circle>
+<circle cx="365.0202429149798" cy="680.3967081662798" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2020-01-05</title></circle>
+<circle cx="899.1093117408907" cy="683.9417598649504" r="5" fill="#2563eb"><title>ETH-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2021-01-03</title></circle>
+<circle cx="552.2267206477732" cy="700.2827600759654" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2021-01-03</title></circle>
+<circle cx="479.8380566801619" cy="691.4707744249841" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2021-01-03</title></circle>
+<circle cx="552.2267206477732" cy="707.2378138847859" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2021-01-03</title></circle>
+<circle cx="479.67611336032394" cy="684.5157206161638" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2021-01-03</title></circle>
+<circle cx="593.5222672064777" cy="712.3359358514455" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2021-01-03</title></circle>
+<circle cx="429.7975708502024" cy="679.4175986495042" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2021-01-03</title></circle>
+<circle cx="673.0364372469635" cy="716.4887106984596" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2021-01-03</title></circle>
+<circle cx="425.7489878542511" cy="675.26482380249" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2021-01-03</title></circle>
+<circle cx="823.8056680161943" cy="678.6073011183794" r="5" fill="#2563eb"><title>ETH-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2022-01-02</title></circle>
+<circle cx="400.48582995951415" cy="700.6879088415277" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2022-01-02</title></circle>
+<circle cx="509.7975708502024" cy="685.7311669128508" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2022-01-02</title></circle>
+<circle cx="398.7044534412956" cy="707.6429626503482" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2022-01-02</title></circle>
+<circle cx="511.57894736842104" cy="678.7761131040304" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2022-01-02</title></circle>
+<circle cx="432.7125506072875" cy="712.8761342055286" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2022-01-02</title></circle>
+<circle cx="480.6477732793521" cy="673.54294154885" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2022-01-02</title></circle>
+<circle cx="420.7287449392712" cy="718.2443553492297" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2022-01-02</title></circle>
+<circle cx="500.40485829959516" cy="668.1747204051487" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2022-01-02</title></circle>
+<circle cx="788.1781376518218" cy="707.0690018991348" r="5" fill="#2563eb"><title>ETH-USD | weekly_fixed_dca(weekly_amount_usd=100) | 2023-01-01</title></circle>
+<circle cx="380.2429149797571" cy="711.6269255117113" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=20) | 2023-01-01</title></circle>
+<circle cx="414.7368421052632" cy="703.2538510234226" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=20) | 2023-01-01</title></circle>
+<circle cx="434.9797570850202" cy="711.6269255117113" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=50) | 2023-01-01</title></circle>
+<circle cx="360.3238866396762" cy="703.2538510234226" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=50) | 2023-01-01</title></circle>
+<circle cx="495.5465587044534" cy="717.6366322008863" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=100) | 2023-01-01</title></circle>
+<circle cx="302.9959514170041" cy="697.2441443342477" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=100) | 2023-01-01</title></circle>
+<circle cx="578.2995951417004" cy="720.0" r="5" fill="#2563eb"><title>ETH-USD | weekly_ma_trend_dca(weekly_amount_usd=100,window_days=200) | 2023-01-01</title></circle>
+<circle cx="263.15789473684214" cy="694.880776535134" r="5" fill="#2563eb"><title>ETH-USD | weekly_dip_dca(weekly_amount_usd=100,window_days=200) | 2023-01-01</title></circle>
+<circle cx="997.246963562753" cy="80.0" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | btc_only_weekly | 2020-01-05</title></circle>
+<circle cx="1120.0" cy="232.7073222198776" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | eth_only_weekly | 2020-01-05</title></circle>
+<circle cx="1078.7044534412953" cy="156.3367799113737" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | equal_split_weekly | 2020-01-05</title></circle>
+<circle cx="1090.0404858299594" cy="146.6132095378772" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | risk_on_eth_risk_off_btc(window_days=50) | 2020-01-05</title></circle>
+<circle cx="1082.914979757085" cy="156.3030175142435" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=28) | 2020-01-05</title></circle>
+<circle cx="1074.1700404858298" cy="156.3705423085038" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=28) | 2020-01-05</title></circle>
+<circle cx="1096.6801619433197" cy="139.4893437434057" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=84) | 2020-01-05</title></circle>
+<circle cx="1055.0607287449393" cy="173.21797847647179" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=84) | 2020-01-05</title></circle>
+<circle cx="641.9433198380566" cy="404.11901244988394" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | btc_only_weekly | 2021-01-03</title></circle>
+<circle cx="899.1093117408907" cy="683.9417598649504" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | eth_only_weekly | 2021-01-03</title></circle>
+<circle cx="786.7206477732793" cy="544.0303861574172" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | equal_split_weekly | 2021-01-03</title></circle>
+<circle cx="815.8704453441295" cy="533.2264190757544" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | risk_on_eth_risk_off_btc(window_days=50) | 2021-01-03</title></circle>
+<circle cx="794.9797570850202" cy="537.9193922768517" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=28) | 2021-01-03</title></circle>
+<circle cx="778.2995951417004" cy="550.1413800379827" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=28) | 2021-01-03</title></circle>
+<circle cx="855.2226720647773" cy="529.7826545684744" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=84) | 2021-01-03</title></circle>
+<circle cx="713.1983805668016" cy="558.2781177463601" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=84) | 2021-01-03</title></circle>
+<circle cx="615.5465587044534" cy="391.2893015404094" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | btc_only_weekly | 2022-01-02</title></circle>
+<circle cx="823.8056680161943" cy="678.6073011183794" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | eth_only_weekly | 2022-01-02</title></circle>
+<circle cx="674.8178137651821" cy="534.9483013293943" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | equal_split_weekly | 2022-01-02</title></circle>
+<circle cx="664.7773279352226" cy="516.817894070479" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | risk_on_eth_risk_off_btc(window_days=50) | 2022-01-02</title></circle>
+<circle cx="656.0323886639677" cy="515.5011605824013" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=28) | 2022-01-02</title></circle>
+<circle cx="694.4129554655871" cy="554.3954420763874" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=28) | 2022-01-02</title></circle>
+<circle cx="648.421052631579" cy="496.35788140958005" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=84) | 2022-01-02</title></circle>
+<circle cx="703.9676113360325" cy="573.5387212492087" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=84) | 2022-01-02</title></circle>
+<circle cx="589.3117408906883" cy="513.0027431947668" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | btc_only_weekly | 2023-01-01</title></circle>
+<circle cx="788.1781376518218" cy="707.0690018991348" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | eth_only_weekly | 2023-01-01</title></circle>
+<circle cx="652.6315789473684" cy="610.0358725469508" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | equal_split_weekly | 2023-01-01</title></circle>
+<circle cx="656.6801619433198" cy="632.6229162270521" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | risk_on_eth_risk_off_btc(window_days=50) | 2023-01-01</title></circle>
+<circle cx="627.3684210526316" cy="589.1707111204896" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=28) | 2023-01-01</title></circle>
+<circle cx="679.1902834008097" cy="630.9347963705424" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=28) | 2023-01-01</title></circle>
+<circle cx="616.68016194332" cy="560.4726735598227" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_stronger_return_weekly(window_days=84) | 2023-01-01</title></circle>
+<circle cx="694.8987854251012" cy="659.5990715340789" r="5" fill="#b45309"><title>BTC-USD+ETH-USD | buy_weaker_return_weekly(window_days=84) | 2023-01-01</title></circle>
+</svg>
