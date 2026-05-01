@@ -13,8 +13,9 @@ class MultiAssetPortfolioState:
 
 
 class RotationBacktestEngine:
-    def __init__(self, weekly_contribution_usd, fee_bps=0):
-        self.weekly_contribution_usd = Decimal(str(weekly_contribution_usd))
+    def __init__(self, contribution_amount_usd, interval_days=7, fee_bps=0):
+        self.contribution_amount_usd = Decimal(str(contribution_amount_usd))
+        self.interval_days = interval_days
         self.fee_bps = Decimal(str(fee_bps))
 
     def run(self, bundle, strategy, since):
@@ -24,9 +25,12 @@ class RotationBacktestEngine:
         trades = []
         equity_curve = []
 
-        for timestamp in bundle.common_sunday_timestamps_since(since):
-            state.total_contributed += self.weekly_contribution_usd
-            state.cash_balance += self.weekly_contribution_usd
+        for index, timestamp in enumerate(bundle.common_timestamps_since(since)):
+            if index % self.interval_days != 0:
+                continue
+
+            state.total_contributed += self.contribution_amount_usd
+            state.cash_balance += self.contribution_amount_usd
 
             decision = strategy.decide(timestamp, bundle, state)
             weights = _normalize_weights(decision.weights, bundle.symbols())
@@ -35,9 +39,9 @@ class RotationBacktestEngine:
             for symbol, weight in weights.items():
                 if weight <= 0:
                     continue
-                buy_notional = state.cash_balance * weight if deployed_this_week == ZERO else self.weekly_contribution_usd * weight
+                buy_notional = state.cash_balance * weight if deployed_this_week == ZERO else self.contribution_amount_usd * weight
                 # Always allocate the full weekly contribution across weights, not the whole accumulated cash.
-                buy_notional = self.weekly_contribution_usd * weight
+                buy_notional = self.contribution_amount_usd * weight
                 if buy_notional <= 0:
                     continue
                 fee_usd = (buy_notional * self.fee_bps) / Decimal("10000")
@@ -90,6 +94,7 @@ class RotationBacktestEngine:
             strategy_name=strategy.name,
             strategy_label=strategy.label(),
             symbol=bundle.symbol_label(),
+            contribution_interval=_interval_label(self.interval_days),
             start_timestamp=equity_curve[0].timestamp,
             end_timestamp=equity_curve[-1].timestamp,
             total_contributed=state.total_contributed,
@@ -112,3 +117,7 @@ def _normalize_weights(weights, allowed_symbols):
     if total != Decimal("1"):
         raise ValueError(f"Strategy weights must sum to 1, got {total}")
     return normalized
+
+
+def _interval_label(interval_days):
+    return f"{interval_days}d"

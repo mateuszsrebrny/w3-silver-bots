@@ -40,6 +40,7 @@ DEFAULT_SYMBOLS = ["BTC-USD", "ETH-USD"]
 DEFAULT_SINCE_DATES = ["2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01"]
 DEFAULT_MA_WINDOWS = [20, 50, 100, 200]
 DEFAULT_DUAL_RETURN_WINDOWS = [28, 84]
+DEFAULT_INTERVAL_DAYS = [1, 2, 3, 5]
 
 
 def parse_args():
@@ -61,6 +62,12 @@ def parse_args():
         action="append",
         type=int,
         help="Repeat to evaluate multiple moving-average windows.",
+    )
+    parser.add_argument(
+        "--interval-days",
+        action="append",
+        type=int,
+        help="Repeat to evaluate multiple contribution cadences in days.",
     )
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
@@ -102,9 +109,9 @@ def parse_since(value):
     return datetime.fromisoformat(value).replace(tzinfo=UTC)
 
 
-def run_backtests(symbol, since, weekly_amount, ma_window, data_root):
+def run_backtests(symbol, since, weekly_amount, ma_window, interval_days, data_root):
     series = build_series(symbol, data_root)
-    engine = BacktestEngine(weekly_amount)
+    engine = BacktestEngine(weekly_amount, interval_days=interval_days)
     results = [
         engine.run(series, strategy, since)
         for strategy in build_strategies(weekly_amount, ma_window)
@@ -112,56 +119,61 @@ def run_backtests(symbol, since, weekly_amount, ma_window, data_root):
     return results
 
 
-def run_dual_asset_backtests(symbols, since, weekly_amount, return_windows, data_root):
+def run_dual_asset_backtests(symbols, since, weekly_amount, interval_days, return_windows, data_root):
     series_by_symbol = {
         symbol: build_series(symbol, data_root)
         for symbol in symbols
     }
     bundle = MultiAssetSeries(series_by_symbol)
-    engine = RotationBacktestEngine(weekly_amount)
+    engine = RotationBacktestEngine(weekly_amount, interval_days=interval_days)
     return [
         engine.run(bundle, strategy, since)
         for strategy in build_dual_asset_strategies(return_windows)
     ]
 
 
-def run_experiment_matrix(symbols, since_dates, weekly_amount, ma_windows, data_root):
+def run_experiment_matrix(symbols, since_dates, weekly_amount, ma_windows, interval_days_options, data_root):
     all_results = []
     for symbol in symbols:
         for since in since_dates:
-            fixed_results = run_backtests(
-                symbol=symbol,
-                since=since,
-                weekly_amount=weekly_amount,
-                ma_window=ma_windows[0],
-                data_root=data_root,
-            )
-            all_results.append(fixed_results[0])
-
-            for ma_window in ma_windows:
-                ma_results = run_backtests(
+            for interval_days in interval_days_options:
+                fixed_results = run_backtests(
                     symbol=symbol,
                     since=since,
                     weekly_amount=weekly_amount,
-                    ma_window=ma_window,
+                    ma_window=ma_windows[0],
+                    interval_days=interval_days,
                     data_root=data_root,
                 )
-                all_results.extend(ma_results[1:])
+                all_results.append(fixed_results[0])
+
+                for ma_window in ma_windows:
+                    ma_results = run_backtests(
+                        symbol=symbol,
+                        since=since,
+                        weekly_amount=weekly_amount,
+                        ma_window=ma_window,
+                        interval_days=interval_days,
+                        data_root=data_root,
+                    )
+                    all_results.extend(ma_results[1:])
     return all_results
 
 
-def run_dual_experiment_matrix(symbols, since_dates, weekly_amount, return_windows, data_root):
+def run_dual_experiment_matrix(symbols, since_dates, weekly_amount, interval_days_options, return_windows, data_root):
     all_results = []
     for since in since_dates:
-        all_results.extend(
-            run_dual_asset_backtests(
-                symbols=symbols,
-                since=since,
-                weekly_amount=weekly_amount,
-                return_windows=return_windows,
-                data_root=data_root,
+        for interval_days in interval_days_options:
+            all_results.extend(
+                run_dual_asset_backtests(
+                    symbols=symbols,
+                    since=since,
+                    weekly_amount=weekly_amount,
+                    interval_days=interval_days,
+                    return_windows=return_windows,
+                    data_root=data_root,
+                )
             )
-        )
     return all_results
 
 
@@ -217,6 +229,7 @@ def build_manifest(
     since_dates,
     weekly_amount,
     ma_windows,
+    interval_days_options,
     dual_return_windows,
     data_root,
 ):
@@ -228,6 +241,7 @@ def build_manifest(
         "since_dates": [date.date().isoformat() for date in since_dates],
         "weekly_amount_usd": str(weekly_amount),
         "single_asset_ma_windows": list(ma_windows),
+        "interval_days_options": list(interval_days_options),
         "dual_asset_return_windows": list(dual_return_windows),
         "data_root": str(data_root),
         "data_files": {
@@ -242,6 +256,7 @@ def main():
     symbols = args.symbol or DEFAULT_SYMBOLS
     since_dates = [parse_since(value) for value in (args.since or DEFAULT_SINCE_DATES)]
     ma_windows = args.ma_window or DEFAULT_MA_WINDOWS
+    interval_days_options = args.interval_days or DEFAULT_INTERVAL_DAYS
     results = []
     if args.strategy_set in ["single", "all"]:
         results.extend(
@@ -250,6 +265,7 @@ def main():
                 since_dates=since_dates,
                 weekly_amount=args.weekly_amount,
                 ma_windows=ma_windows,
+                interval_days_options=interval_days_options,
                 data_root=args.data_root,
             )
         )
@@ -259,6 +275,7 @@ def main():
                 symbols=DEFAULT_SYMBOLS,
                 since_dates=since_dates,
                 weekly_amount=args.weekly_amount,
+                interval_days_options=interval_days_options,
                 return_windows=DEFAULT_DUAL_RETURN_WINDOWS,
                 data_root=args.data_root,
             )
@@ -270,6 +287,7 @@ def main():
         since_dates=since_dates,
         weekly_amount=args.weekly_amount,
         ma_windows=ma_windows,
+        interval_days_options=interval_days_options,
         dual_return_windows=DEFAULT_DUAL_RETURN_WINDOWS,
         data_root=args.data_root,
     )

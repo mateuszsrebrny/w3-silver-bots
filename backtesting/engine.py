@@ -40,6 +40,7 @@ class BacktestResult:
     strategy_name: str
     strategy_label: str
     symbol: str
+    contribution_interval: str
     start_timestamp: datetime
     end_timestamp: datetime
     total_contributed: Decimal
@@ -56,8 +57,9 @@ class BacktestResult:
 
 
 class BacktestEngine:
-    def __init__(self, weekly_contribution_usd, fee_bps=0):
-        self.weekly_contribution_usd = Decimal(str(weekly_contribution_usd))
+    def __init__(self, contribution_amount_usd, interval_days=7, fee_bps=0):
+        self.contribution_amount_usd = Decimal(str(contribution_amount_usd))
+        self.interval_days = interval_days
         self.fee_bps = Decimal(str(fee_bps))
 
     def run(self, series, strategy, since):
@@ -65,9 +67,12 @@ class BacktestEngine:
         trades = []
         equity_curve = []
 
-        for candle in series.sunday_candles_since(since):
-            state.total_contributed += self.weekly_contribution_usd
-            state.cash_balance += self.weekly_contribution_usd
+        for index, candle in enumerate(series.candles_since(since)):
+            if index % self.interval_days != 0:
+                continue
+
+            state.total_contributed += self.contribution_amount_usd
+            state.cash_balance += self.contribution_amount_usd
 
             decision = strategy.decide(candle, series, state)
             buy_notional = min(Decimal(str(decision.buy_usd)), state.cash_balance)
@@ -117,6 +122,7 @@ class BacktestEngine:
             strategy_name=strategy.name,
             strategy_label=strategy.label(),
             symbol=series.product_id,
+            contribution_interval=_interval_label(self.interval_days),
             start_timestamp=equity_curve[0].timestamp,
             end_timestamp=equity_curve[-1].timestamp,
             total_contributed=state.total_contributed,
@@ -146,3 +152,7 @@ def _max_drawdown_pct(equity_curve):
                 max_drawdown = drawdown
 
     return max_drawdown
+
+
+def _interval_label(interval_days):
+    return f"{interval_days}d"

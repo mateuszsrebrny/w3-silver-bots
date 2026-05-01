@@ -8,6 +8,19 @@ class MultiAssetSeries:
     def symbols(self):
         return list(self.series_by_symbol.keys())
 
+    def common_timestamps_since(self, since):
+        timestamp_sets = []
+        for series in self.series_by_symbol.values():
+            timestamps = {
+                candle.timestamp for candle in series.candles_since(since)
+            }
+            timestamp_sets.append(timestamps)
+
+        if not timestamp_sets:
+            return []
+
+        return sorted(set.intersection(*timestamp_sets))
+
     def common_sunday_timestamps_since(self, since):
         timestamp_sets = []
         for series in self.series_by_symbol.values():

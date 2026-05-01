@@ -16,18 +16,20 @@ def test_parse_since_returns_utc_datetime():
 def test_main_passes_arguments_to_runner(monkeypatch, capsys):
     captured = {}
 
-    def fake_run_experiment_matrix(symbols, since_dates, weekly_amount, ma_windows, data_root):
+    def fake_run_experiment_matrix(symbols, since_dates, weekly_amount, ma_windows, interval_days_options, data_root):
         captured["symbols"] = symbols
         captured["since_dates"] = since_dates
         captured["weekly_amount"] = weekly_amount
         captured["ma_windows"] = ma_windows
+        captured["interval_days_options"] = interval_days_options
         captured["data_root"] = data_root
         return ["fake-results"]
 
-    def fake_run_dual_experiment_matrix(symbols, since_dates, weekly_amount, return_windows, data_root):
+    def fake_run_dual_experiment_matrix(symbols, since_dates, weekly_amount, interval_days_options, return_windows, data_root):
         captured["dual_symbols"] = symbols
         captured["dual_since_dates"] = since_dates
         captured["dual_weekly_amount"] = weekly_amount
+        captured["dual_interval_days_options"] = interval_days_options
         captured["dual_return_windows"] = return_windows
         captured["dual_data_root"] = data_root
         return ["fake-dual-results"]
@@ -66,6 +68,10 @@ def test_main_passes_arguments_to_runner(monkeypatch, capsys):
             "30",
             "--ma-window",
             "60",
+            "--interval-days",
+            "1",
+            "--interval-days",
+            "5",
             "--data-root",
             "custom-data",
             "--output-dir",
@@ -85,6 +91,7 @@ def test_main_passes_arguments_to_runner(monkeypatch, capsys):
         ],
         "weekly_amount": "150",
         "ma_windows": [30, 60],
+        "interval_days_options": [1, 5],
         "data_root": "custom-data",
         "dual_symbols": ["BTC-USD", "ETH-USD"],
         "dual_since_dates": [
@@ -92,6 +99,7 @@ def test_main_passes_arguments_to_runner(monkeypatch, capsys):
             datetime(2022, 1, 1, tzinfo=UTC),
         ],
         "dual_weekly_amount": "150",
+        "dual_interval_days_options": [1, 5],
         "dual_return_windows": [28, 84],
         "dual_data_root": "custom-data",
     }
@@ -103,9 +111,9 @@ def test_main_passes_arguments_to_runner(monkeypatch, capsys):
 def test_run_experiment_matrix_runs_fixed_once_per_symbol_since(monkeypatch):
     calls = []
 
-    def fake_run_backtests(symbol, since, weekly_amount, ma_window, data_root):
-        calls.append((symbol, since, weekly_amount, ma_window, data_root))
-        return [f"fixed-{symbol}-{since.date()}", f"trend-{ma_window}", f"dip-{ma_window}"]
+    def fake_run_backtests(symbol, since, weekly_amount, ma_window, interval_days, data_root):
+        calls.append((symbol, since, weekly_amount, ma_window, interval_days, data_root))
+        return [f"fixed-{symbol}-{since.date()}-{interval_days}", f"trend-{ma_window}-{interval_days}", f"dip-{ma_window}-{interval_days}"]
 
     monkeypatch.setattr(run_backtest, "run_backtests", fake_run_backtests)
 
@@ -114,20 +122,29 @@ def test_run_experiment_matrix_runs_fixed_once_per_symbol_since(monkeypatch):
         since_dates=[datetime(2021, 1, 1, tzinfo=UTC)],
         weekly_amount="100",
         ma_windows=[20, 50],
+        interval_days_options=[1, 3],
         data_root="data-root",
     )
 
     assert results == [
-        "fixed-BTC-USD-2021-01-01",
-        "trend-20",
-        "dip-20",
-        "trend-50",
-        "dip-50",
+        "fixed-BTC-USD-2021-01-01-1",
+        "trend-20-1",
+        "dip-20-1",
+        "trend-50-1",
+        "dip-50-1",
+        "fixed-BTC-USD-2021-01-01-3",
+        "trend-20-3",
+        "dip-20-3",
+        "trend-50-3",
+        "dip-50-3",
     ]
     assert calls == [
-        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, "data-root"),
-        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, "data-root"),
-        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 50, "data-root"),
+        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, 1, "data-root"),
+        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, 1, "data-root"),
+        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 50, 1, "data-root"),
+        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, 3, "data-root"),
+        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 20, 3, "data-root"),
+        ("BTC-USD", datetime(2021, 1, 1, tzinfo=UTC), "100", 50, 3, "data-root"),
     ]
 
 

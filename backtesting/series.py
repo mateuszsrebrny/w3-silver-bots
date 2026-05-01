@@ -17,6 +17,16 @@ class PriceSeries:
         self.granularity = granularity
         self._candles = list(candles)
         self._by_timestamp = {candle.timestamp: candle for candle in self._candles}
+        self._timestamps = [candle.timestamp for candle in self._candles]
+        self._index_by_timestamp = {
+            candle.timestamp: index for index, candle in enumerate(self._candles)
+        }
+        self._closes = [candle.close for candle in self._candles]
+        self._prefix_close_sums = []
+        running_sum = Decimal("0")
+        for close in self._closes:
+            running_sum += close
+            self._prefix_close_sums.append(running_sum)
 
     @classmethod
     def from_csv(cls, path):
@@ -28,6 +38,9 @@ class PriceSeries:
 
     def candles(self):
         return list(self._candles)
+
+    def candles_since(self, since):
+        return [candle for candle in self._candles if candle.timestamp >= since]
 
     def sunday_candles_since(self, since):
         return [
@@ -46,24 +59,26 @@ class PriceSeries:
         return candle.close
 
     def moving_average(self, timestamp, window_days):
-        closes = []
-        for candle in self._candles:
-            if candle.timestamp > timestamp:
-                break
-            closes.append(candle.close)
-
-        if len(closes) < window_days:
+        index = self._index_by_timestamp.get(timestamp)
+        if index is None:
+            return None
+        if index + 1 < window_days:
             return None
 
-        window = closes[-window_days:]
-        return sum(window) / Decimal(window_days)
+        window_end = self._prefix_close_sums[index]
+        window_start = (
+            self._prefix_close_sums[index - window_days]
+            if index >= window_days
+            else Decimal("0")
+        )
+        return (window_end - window_start) / Decimal(window_days)
 
     def trailing_return(self, timestamp, window_days):
-        current_close = self.close_at(timestamp)
-        if current_close is None:
+        index = self._index_by_timestamp.get(timestamp)
+        if index is None or index < window_days:
             return None
-
-        lookback_close = self.close_at(timestamp.replace() - timedelta(days=window_days))
+        current_close = self._closes[index]
+        lookback_close = self._closes[index - window_days]
         if lookback_close is None or lookback_close == 0:
             return None
 
