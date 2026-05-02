@@ -84,6 +84,8 @@ Create `.env` with at least:
 
 ```bash
 WALLET=0xYourWalletAddress
+BOT_WALLET=0xYourBotWalletAddress
+BOT_PRIVATE_KEY=0xyour_bot_private_key_here
 ```
 
 ## Running The Tracker

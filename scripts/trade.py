@@ -72,9 +72,9 @@ def quantize_amount(value, places="0.000000"):
 
 
 def load_private_key():
-    private_key = os.getenv("PRIVATE_KEY")
+    private_key = os.getenv("BOT_PRIVATE_KEY") or os.getenv("PRIVATE_KEY")
     if not private_key:
-        raise ValueError("PRIVATE_KEY is not set in the environment")
+        raise ValueError("BOT_PRIVATE_KEY is not set in the environment")
     return private_key
 
 

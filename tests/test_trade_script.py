@@ -205,7 +205,7 @@ def test_main_preview_only_prints_trade_summary(monkeypatch, capsys):
             "100",
         ],
     )
-    monkeypatch.setenv("PRIVATE_KEY", "0x" + "11" * 32)
+    monkeypatch.setenv("BOT_PRIVATE_KEY", "0x" + "11" * 32)
 
     trade.main()
 

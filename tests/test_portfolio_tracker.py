@@ -76,6 +76,28 @@ def test_build_balances_uses_tracked_tokens(monkeypatch):
     assert [balance.token_name for balance in balances] == ["bal", "aave", "eth"]
     assert all(balance.value_token == "usd" for balance in balances)
     assert all(balance._blockchain_access.dry_run is False for balance in balances)
+    assert all(balance.wallet == "0xwallet" for balance in balances)
+
+
+def test_build_balances_supports_multiple_wallets(monkeypatch):
+    original_tracked = portfolio_tracker.TRACKED_TOKENS
+    portfolio_tracker.TRACKED_TOKENS = {"polygon": ["bal"]}
+
+    try:
+        balances = portfolio_tracker.build_balances(
+            ["polygon"],
+            [
+                portfolio_tracker.WalletSpec("external", "0xext"),
+                portfolio_tracker.WalletSpec("bot", "0xbot"),
+            ],
+            blockchain_access_cls=FakeBlockchainAccess,
+        )
+    finally:
+        portfolio_tracker.TRACKED_TOKENS = original_tracked
+
+    assert [balance.wallet for balance in balances] == ["0xext", "0xbot"]
+    assert [balance.wallet_label for balance in balances] == ["external", "bot"]
+    assert str(balances[0]) == "bal @ polygon [external]: 7 = 21 usdc"
 
 
 def test_all_tracked_tokens_exist_in_config():
@@ -94,8 +116,9 @@ def test_all_tracked_tokens_exist_in_config():
 
 def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     monkeypatch.setenv("WALLET", "0xwallet")
+    monkeypatch.setenv("BOT_WALLET", "0xbot")
     monkeypatch.setattr(portfolio_tracker, "DEFAULT_CHAINS", ["polygon"])
-    monkeypatch.setattr(portfolio_tracker, "build_balances", lambda chains, wallet, dry_run=True, value_token="usdc", blockchain_access_cls=None: ["b2", "b1"])
+    monkeypatch.setattr(portfolio_tracker, "build_balances", lambda chains, wallets, dry_run=True, value_token="usdc", blockchain_access_cls=None: ["b2", "b1"])
     monkeypatch.setattr(portfolio_tracker, "sort_balances", lambda balances: balances.reverse())
     monkeypatch.setattr(portfolio_tracker, "print_balances", lambda balances: print(f"balances={balances}"))
     monkeypatch.setattr(portfolio_tracker, "load_dotenv", lambda: None)
@@ -110,9 +133,22 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     portfolio_tracker.main()
 
     captured = capsys.readouterr()
-    assert "Wallet: 0xwallet" in captured.out
+    assert "Wallet [external]: 0xwallet" in captured.out
+    assert "Wallet [bot]: 0xbot" in captured.out
     assert "config_loaded" in captured.out
     assert "balances=['b1', 'b2']" in captured.out
+
+
+def test_load_wallets_from_env_supports_wallet_and_bot_wallet(monkeypatch):
+    monkeypatch.setenv("WALLET", "0xwallet")
+    monkeypatch.setenv("BOT_WALLET", "0xbot")
+
+    wallets = portfolio_tracker.load_wallets_from_env()
+
+    assert wallets == [
+        portfolio_tracker.WalletSpec("external", "0xwallet"),
+        portfolio_tracker.WalletSpec("bot", "0xbot"),
+    ]
 
 
 def test_module_runs_main_when_executed_as_script(monkeypatch):
