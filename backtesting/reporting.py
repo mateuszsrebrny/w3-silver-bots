@@ -99,3 +99,12 @@ def write_results_markdown(path, results):
 def write_manifest_json(path, manifest):
     with open(path, "w") as handle:
         json.dump(manifest, handle, indent=2, sort_keys=True)
+
+
+def group_results_by_keys(results, *keys):
+    grouped = {}
+    for result in results:
+        row = result_to_row(result)
+        group_key = tuple(row[key] for key in keys)
+        grouped.setdefault(group_key, []).append(result)
+    return grouped

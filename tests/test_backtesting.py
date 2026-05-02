@@ -4,7 +4,13 @@ from decimal import Decimal
 from backtesting.engine import BacktestEngine
 from backtesting.multi_asset import MultiAssetSeries
 from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
-from backtesting.portfolio_strategies import Static50_50Rebalance, Target50_50WithCashBand
+from backtesting.portfolio_strategies import (
+    BTCDefensiveETHAggressive,
+    DrawdownTiltRebalance,
+    NarrowCashBandRebalance,
+    Static50_50Rebalance,
+    Target50_50WithCashBand,
+)
 from backtesting.reporting import format_results_markdown, format_results_table, result_to_row, write_results_csv
 from backtesting.rotation_engine import RotationBacktestEngine
 from backtesting.rotation_strategies import (
@@ -282,6 +288,43 @@ def test_target_50_50_with_cash_band_prefers_both_assets_when_cheap():
     assert decision.target_weights["DAI"] == Decimal("0.10")
     assert decision.target_weights["BTC-USD"] == Decimal("0.45")
     assert decision.target_weights["ETH-USD"] == Decimal("0.45")
+
+
+def test_narrow_cash_band_keeps_more_risk_on_in_expensive_regime():
+    btc = make_series(list(range(1, 251)) + [260], product_id="BTC-USD")
+    eth = make_series(list(range(1, 251)) + [270], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = NarrowCashBandRebalance()
+
+    decision = strategy.decide(datetime(2024, 9, 7, tzinfo=UTC), bundle, None)
+
+    assert decision.target_weights["DAI"] == Decimal("0.35")
+    assert decision.target_weights["BTC-USD"] == Decimal("0.325")
+    assert decision.target_weights["ETH-USD"] == Decimal("0.325")
+
+
+def test_drawdown_tilt_rebalance_overweights_deeper_drawdown_asset():
+    btc = make_series([100] * 250 + [85], product_id="BTC-USD")
+    eth = make_series([100] * 250 + [50], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = DrawdownTiltRebalance()
+
+    decision = strategy.decide(datetime(2024, 9, 7, tzinfo=UTC), bundle, None)
+
+    assert decision.target_weights["DAI"] == Decimal("0.05")
+    assert decision.target_weights["ETH-USD"] > decision.target_weights["BTC-USD"]
+
+
+def test_btc_defensive_eth_aggressive_prefers_eth_when_eth_is_strong():
+    btc = make_series(([50] * 150) + ([200] * 20) + ([120] * 89) + [121], product_id="BTC-USD")
+    eth = make_series(([50] * 150) + ([100] * 20) + ([180] * 89) + [181], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = BTCDefensiveETHAggressive(ma_window_days=50, return_window_days=84)
+
+    decision = strategy.decide(datetime(2024, 9, 7, tzinfo=UTC), bundle, None)
+
+    assert decision.target_weights["DAI"] == Decimal("0.10")
+    assert decision.target_weights["ETH-USD"] > decision.target_weights["BTC-USD"]
 
 
 def test_portfolio_management_engine_can_buy_and_withdraw():
