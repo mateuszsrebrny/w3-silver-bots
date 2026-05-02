@@ -127,6 +127,9 @@ networks:
     chain_id: 42161
     contracts:
       erc20:
+        dai:
+          address: "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1"
+          decimals: "ether"
         eth:
           address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
           decimals: "ether"
@@ -134,6 +137,9 @@ networks:
         weth:
           address: "0x82aF49447D8a07e3bd95BD0d56f35241523fBab1"
           decimals: "ether"
+        wbtc:
+          address: "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f"
+          decimals: "lovelace"
         aarb:
           address: "0x6533afac2E7BCCB20dca161449A13A32D391fb00"
           decimals: "ether"

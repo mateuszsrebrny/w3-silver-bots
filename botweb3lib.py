@@ -93,6 +93,10 @@ class BlockchainAccess:
     def get_token_contract_address(self, token):
         return self.get_contract_address("erc20", token)
 
+    def get_token_contract(self, token):
+        self.init_token_contract(token)
+        return self._contract.get(token)
+
     def get_w3(self):
         if not self._w3:
             rpc_url = self.get_rpc_url()
@@ -160,6 +164,14 @@ class BlockchainAccess:
 
         balance_wei = self._contract[token].functions.balanceOf(wallet).call()
         return BlockchainAccess.my_fromWei(balance_wei, self.get_decimals(token))
+
+    def check_allowance(self, token, owner, spender):
+        if self.is_native_token(token):
+            return Decimal("0")
+
+        contract = self.get_token_contract(token)
+        allowance_wei = contract.functions.allowance(owner, spender).call()
+        return BlockchainAccess.my_fromWei(allowance_wei, self.get_decimals(token))
 
     def check_balance(self, tokens, wallet):
         balance = {}
