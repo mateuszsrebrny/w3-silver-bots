@@ -10,7 +10,7 @@ TRACKED_TOKENS = {
     "polygon": ["pol", "aave", "link", "ghst", "bal"],
     "optimism": ["eth", "velo"],
     "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
-    "arbitrum": ["aarb", "eth"],
+    "arbitrum": ["aarb", "eth", "dai", "wbtc"],
 }
 
 
