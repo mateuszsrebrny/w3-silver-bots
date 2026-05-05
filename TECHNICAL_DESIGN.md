@@ -16,9 +16,9 @@ They share some domain concepts, but they are intentionally separated so live wa
 
 Files:
 
-- [portfolio_tracker.py](/home/mati/devel/w3-silver-bots/portfolio_tracker.py:1)
-- [botweb3lib.py](/home/mati/devel/w3-silver-bots/botweb3lib.py:1)
-- [chains.config.yaml](/home/mati/devel/w3-silver-bots/chains.config.yaml:1)
+- [portfolio_tracker.py](portfolio_tracker.py)
+- [botweb3lib.py](botweb3lib.py)
+- [chains.config.yaml](chains.config.yaml)
 
 Responsibilities:
 
@@ -48,11 +48,11 @@ Design boundary:
 
 Files:
 
-- [market_data/candles.py](/home/mati/devel/w3-silver-bots/market_data/candles.py:1)
-- [market_data/providers.py](/home/mati/devel/w3-silver-bots/market_data/providers.py:1)
-- [market_data/store.py](/home/mati/devel/w3-silver-bots/market_data/store.py:1)
-- [market_data/sync.py](/home/mati/devel/w3-silver-bots/market_data/sync.py:1)
-- [scripts/sync_market_data.py](/home/mati/devel/w3-silver-bots/scripts/sync_market_data.py:1)
+- [market_data/candles.py](market_data/candles.py)
+- [market_data/providers.py](market_data/providers.py)
+- [market_data/store.py](market_data/store.py)
+- [market_data/sync.py](market_data/sync.py)
+- [scripts/sync_market_data.py](scripts/sync_market_data.py)
 
 Responsibilities:
 
@@ -85,18 +85,18 @@ Design goals:
 
 Files:
 
-- [backtesting/series.py](/home/mati/devel/w3-silver-bots/backtesting/series.py:1)
-- [backtesting/multi_asset.py](/home/mati/devel/w3-silver-bots/backtesting/multi_asset.py:1)
-- [backtesting/engine.py](/home/mati/devel/w3-silver-bots/backtesting/engine.py:1)
-- [backtesting/rotation_engine.py](/home/mati/devel/w3-silver-bots/backtesting/rotation_engine.py:1)
-- [backtesting/portfolio_engine.py](/home/mati/devel/w3-silver-bots/backtesting/portfolio_engine.py:1)
-- [backtesting/strategies.py](/home/mati/devel/w3-silver-bots/backtesting/strategies.py:1)
-- [backtesting/rotation_strategies.py](/home/mati/devel/w3-silver-bots/backtesting/rotation_strategies.py:1)
-- [backtesting/portfolio_strategies.py](/home/mati/devel/w3-silver-bots/backtesting/portfolio_strategies.py:1)
-- [backtesting/reporting.py](/home/mati/devel/w3-silver-bots/backtesting/reporting.py:1)
-- [scripts/run_backtest.py](/home/mati/devel/w3-silver-bots/scripts/run_backtest.py:1)
-- [scripts/run_portfolio_backtest.py](/home/mati/devel/w3-silver-bots/scripts/run_portfolio_backtest.py:1)
-- [scripts/plot_backtest_scatter.py](/home/mati/devel/w3-silver-bots/scripts/plot_backtest_scatter.py:1)
+- [backtesting/series.py](backtesting/series.py)
+- [backtesting/multi_asset.py](backtesting/multi_asset.py)
+- [backtesting/engine.py](backtesting/engine.py)
+- [backtesting/rotation_engine.py](backtesting/rotation_engine.py)
+- [backtesting/portfolio_engine.py](backtesting/portfolio_engine.py)
+- [backtesting/strategies.py](backtesting/strategies.py)
+- [backtesting/rotation_strategies.py](backtesting/rotation_strategies.py)
+- [backtesting/portfolio_strategies.py](backtesting/portfolio_strategies.py)
+- [backtesting/reporting.py](backtesting/reporting.py)
+- [scripts/run_backtest.py](scripts/run_backtest.py)
+- [scripts/run_portfolio_backtest.py](scripts/run_portfolio_backtest.py)
+- [scripts/plot_backtest_scatter.py](scripts/plot_backtest_scatter.py)
 
 The backtesting layer has three engines because the state machines are different:
 
@@ -115,7 +115,7 @@ The backtesting layer has three engines because the state machines are different
 
 ### Price Series
 
-`PriceSeries` in [backtesting/series.py](/home/mati/devel/w3-silver-bots/backtesting/series.py:1):
+`PriceSeries` in [backtesting/series.py](backtesting/series.py):
 
 - loads validated CSV candles
 - provides:
@@ -124,7 +124,7 @@ The backtesting layer has three engines because the state machines are different
   - trailing return
   - drawdown from rolling high
 
-`MultiAssetSeries` in [backtesting/multi_asset.py](/home/mati/devel/w3-silver-bots/backtesting/multi_asset.py:1):
+`MultiAssetSeries` in [backtesting/multi_asset.py](backtesting/multi_asset.py):
 
 - wraps multiple `PriceSeries`
 - provides common timestamps across symbols
@@ -159,7 +159,7 @@ Reusing DCA metrics like `deployment_pct` for rebalancing strategies was explici
 
 ### Single-Asset DCA
 
-`Decision` in [backtesting/strategies.py](/home/mati/devel/w3-silver-bots/backtesting/strategies.py:1):
+`Decision` in [backtesting/strategies.py](backtesting/strategies.py):
 
 - `buy_usd`
 - `reason`
@@ -174,7 +174,7 @@ Used by:
 
 ### Dual-Asset Recurring Allocation
 
-`AllocationDecision` in [backtesting/rotation_strategies.py](/home/mati/devel/w3-silver-bots/backtesting/rotation_strategies.py:1):
+`AllocationDecision` in [backtesting/rotation_strategies.py](backtesting/rotation_strategies.py):
 
 - `weights`
 - `reason`
@@ -188,7 +188,7 @@ Used by:
 
 ### Portfolio Management
 
-`TargetAllocationDecision` in [backtesting/portfolio_strategies.py](/home/mati/devel/w3-silver-bots/backtesting/portfolio_strategies.py:1):
+`TargetAllocationDecision` in [backtesting/portfolio_strategies.py](backtesting/portfolio_strategies.py):
 
 - `target_weights`
 - `rebalance_fraction`
@@ -228,7 +228,7 @@ This is a different abstraction because the engine is moving an existing portfol
 
 ### DCA/Rotation Outputs
 
-Saved under [reports/backtests](/home/mati/devel/w3-silver-bots/reports/backtests:1):
+Saved under [reports/backtests](reports/backtests):
 
 - CSV
 - Markdown
@@ -238,7 +238,7 @@ Saved under [reports/backtests](/home/mati/devel/w3-silver-bots/reports/backtest
 
 ### Portfolio Outputs
 
-Saved under [reports/portfolio_backtests](/home/mati/devel/w3-silver-bots/reports/portfolio_backtests:1):
+Saved under [reports/portfolio_backtests](reports/portfolio_backtests):
 
 - CSV
 - Markdown
@@ -269,7 +269,7 @@ The `latest/` directory mirrors the most recent run for quick inspection.
 
 ## Test Strategy
 
-Tests live in [tests](/home/mati/devel/w3-silver-bots/tests:1).
+Tests live in [tests](tests).
 
 Coverage intentionally includes:
 
