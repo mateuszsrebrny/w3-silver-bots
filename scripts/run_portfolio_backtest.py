@@ -97,6 +97,7 @@ def parse_args():
     parser.add_argument("--initial-dai", default="10000")
     parser.add_argument("--withdrawal-dai", default="0")
     parser.add_argument("--withdrawal-interval-days", type=int)
+    parser.add_argument("--max-buy-trade-dai")
     return parser.parse_args()
 
 
@@ -133,6 +134,7 @@ def run_portfolio_backtests(
     initial_dai,
     withdrawal_dai,
     withdrawal_interval_days,
+    max_buy_trade_dai=None,
 ):
     results = []
     for since in since_dates:
@@ -141,6 +143,7 @@ def run_portfolio_backtests(
                 interval_days=interval_days,
                 withdrawal_amount_dai=withdrawal_dai,
                 withdrawal_interval_days=withdrawal_interval_days,
+                max_buy_trade_dai=max_buy_trade_dai,
             )
             for strategy in build_portfolio_strategies():
                 results.append(
@@ -183,6 +186,7 @@ def build_manifest(args, since_dates, interval_days_options):
         "initial_dai": str(args.initial_dai),
         "withdrawal_dai": str(args.withdrawal_dai),
         "withdrawal_interval_days": args.withdrawal_interval_days,
+        "max_buy_trade_dai": args.max_buy_trade_dai,
         "data_root": str(args.data_root),
         "data_files": {
             "BTC-USD": str(Path(args.data_root) / "BTC-USD-1d.csv"),
@@ -610,6 +614,7 @@ def main():
         initial_dai=args.initial_dai,
         withdrawal_dai=args.withdrawal_dai,
         withdrawal_interval_days=args.withdrawal_interval_days,
+        max_buy_trade_dai=args.max_buy_trade_dai,
     )
     manifest = build_manifest(args, since_dates, interval_days_options)
     saved_paths = save_results(args.output_dir, results, manifest)

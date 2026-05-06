@@ -61,11 +61,17 @@ class PortfolioManagementBacktestEngine:
         withdrawal_amount_dai="0",
         withdrawal_interval_days=None,
         fee_bps=0,
+        max_buy_trade_dai=None,
     ):
         self.interval_days = interval_days
         self.withdrawal_amount_dai = Decimal(str(withdrawal_amount_dai))
         self.withdrawal_interval_days = withdrawal_interval_days
         self.fee_bps = Decimal(str(fee_bps))
+        self.max_buy_trade_dai = (
+            Decimal(str(max_buy_trade_dai))
+            if max_buy_trade_dai is not None
+            else None
+        )
 
     def run(self, bundle, strategy, since, initial_btc, initial_eth, initial_dai):
         state = PortfolioManagementState(
@@ -115,6 +121,8 @@ class PortfolioManagementBacktestEngine:
 
                 if diff_weight > 0:
                     affordable = min(target_notional, state.dai_units)
+                    if self.max_buy_trade_dai is not None:
+                        affordable = min(affordable, self.max_buy_trade_dai)
                     if affordable <= 0:
                         continue
                     net_dai = affordable - min(fee_dai, affordable)

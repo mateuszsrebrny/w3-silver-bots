@@ -157,6 +157,8 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
             "100",
             "--withdrawal-interval-days",
             "30",
+            "--max-buy-trade-dai",
+            "500",
         ],
     )
 
@@ -174,6 +176,7 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
         "initial_dai": "5000",
         "withdrawal_dai": "100",
         "withdrawal_interval_days": 30,
+        "max_buy_trade_dai": "500",
     }
     output = capsys.readouterr().out
     assert "portfolio-table" in output
