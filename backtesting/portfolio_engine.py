@@ -37,6 +37,21 @@ class PortfolioBacktestResult:
     trade_count: int
     trades: list
     equity_curve: list
+    allocation_curve: list
+
+
+@dataclass(frozen=True)
+class PortfolioAllocationPoint:
+    timestamp: object
+    dai_units: Decimal
+    btc_units: Decimal
+    eth_units: Decimal
+    dai_value: Decimal
+    btc_value: Decimal
+    eth_value: Decimal
+    total_value: Decimal
+    decision_reason: str
+    action: str
 
 
 class PortfolioManagementBacktestEngine:
@@ -62,6 +77,7 @@ class PortfolioManagementBacktestEngine:
         )
         trades = []
         equity_curve = []
+        allocation_curve = []
 
         for index, timestamp in enumerate(bundle.common_timestamps_since(since)):
             if index % self.interval_days != 0:
@@ -84,6 +100,7 @@ class PortfolioManagementBacktestEngine:
 
             target_weights = decision.target_weights
             rebalance_fraction = Decimal(str(decision.rebalance_fraction))
+            step_trades = []
 
             for symbol in ["BTC-USD", "ETH-USD"]:
                 current_weight = current_weights[symbol]
@@ -117,6 +134,7 @@ class PortfolioManagementBacktestEngine:
                             reason=decision.reason,
                         )
                     )
+                    step_trades.append(trades[-1])
                 else:
                     max_sell_value = current_values[symbol]
                     sell_value = min(target_notional, max_sell_value)
@@ -139,17 +157,30 @@ class PortfolioManagementBacktestEngine:
                             reason=decision.reason,
                         )
                     )
+                    step_trades.append(trades[-1])
 
-            portfolio_value = state.dai_units + sum(
-                _position_values(bundle, state.positions, timestamp).values(),
-                ZERO,
-            )
+            ending_values = _position_values(bundle, state.positions, timestamp)
+            portfolio_value = state.dai_units + sum(ending_values.values(), ZERO)
             equity_curve.append(
                 EquityPoint(
                     timestamp=timestamp,
                     portfolio_value=portfolio_value,
                     cash_balance=state.dai_units,
                     asset_units=ZERO,
+                )
+            )
+            allocation_curve.append(
+                PortfolioAllocationPoint(
+                    timestamp=timestamp,
+                    dai_units=state.dai_units,
+                    btc_units=state.positions["BTC-USD"],
+                    eth_units=state.positions["ETH-USD"],
+                    dai_value=state.dai_units,
+                    btc_value=ending_values["BTC-USD"],
+                    eth_value=ending_values["ETH-USD"],
+                    total_value=portfolio_value,
+                    decision_reason=decision.reason,
+                    action=_summarize_step_actions(step_trades),
                 )
             )
 
@@ -197,6 +228,7 @@ class PortfolioManagementBacktestEngine:
             trade_count=len(trades),
             trades=trades,
             equity_curve=equity_curve,
+            allocation_curve=allocation_curve,
         )
 
 
@@ -205,3 +237,24 @@ def _position_values(bundle, positions, timestamp):
         symbol: units * bundle.close(symbol, timestamp)
         for symbol, units in positions.items()
     }
+
+
+def _summarize_step_actions(step_trades):
+    if not step_trades:
+        return "hold"
+
+    action_parts = []
+    for symbol in ["BTC-USD", "ETH-USD"]:
+        symbol_trades = [trade for trade in step_trades if trade.symbol == symbol]
+        if not symbol_trades:
+            continue
+        sides = {trade.side for trade in symbol_trades}
+        asset = "btc" if symbol == "BTC-USD" else "eth"
+        if sides == {"buy"}:
+            action_parts.append(f"buy_{asset}")
+        elif sides == {"sell"}:
+            action_parts.append(f"sell_{asset}")
+        else:
+            action_parts.append(f"rebalance_{asset}")
+
+    return "+".join(action_parts) if action_parts else "hold"

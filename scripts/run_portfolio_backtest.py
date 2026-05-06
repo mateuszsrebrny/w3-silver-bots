@@ -36,6 +36,8 @@ DEFAULT_DATA_ROOT = Path("data/market/coinbase")
 DEFAULT_OUTPUT_DIR = Path("reports/portfolio_backtests")
 DEFAULT_SINCE_DATES = ["2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01"]
 DEFAULT_INTERVAL_DAYS = [1, 2, 3, 5, 7]
+WEEKLY_INTERVAL = "7d"
+TOP_STRATEGY_LIMIT = 3
 
 LINE_WIDTH = 1400
 LINE_HEIGHT = 800
@@ -46,6 +48,22 @@ PALETTE = {
     "narrow_cash_band_rebalance": "#2563eb",
     "drawdown_tilt_rebalance": "#7c3aed",
     "btc_defensive_eth_aggressive": "#b45309",
+}
+ASSET_COLORS = {
+    "DAI": "#facc15",
+    "ETH-USD": "#2563eb",
+    "BTC-USD": "#f97316",
+}
+ACTION_COLORS = {
+    "hold": "#94a3b8",
+    "buy_btc": "#ea580c",
+    "buy_eth": "#2563eb",
+    "buy_btc+buy_eth": "#16a34a",
+    "sell_btc": "#dc2626",
+    "sell_eth": "#7c3aed",
+    "sell_btc+sell_eth": "#0f172a",
+    "buy_btc+sell_eth": "#0891b2",
+    "sell_btc+buy_eth": "#c026d3",
 }
 
 
@@ -295,6 +313,219 @@ def write_equity_curve_plots(results, output_dir):
     return written
 
 
+def _weekly_results(results):
+    return [result for result in results if result.contribution_interval == WEEKLY_INTERVAL]
+
+
+def _mean(values):
+    return sum(values) / len(values) if values else 0
+
+
+def rank_top_weekly_strategies(results, limit=TOP_STRATEGY_LIMIT):
+    weekly_results = _weekly_results(results)
+    strategy_rows = {}
+    for result in weekly_results:
+        strategy_rows.setdefault(result.strategy_name, []).append(result)
+
+    ranking = []
+    for strategy_name, strategy_results in strategy_rows.items():
+        returns = [float(result.total_return_pct) for result in strategy_results]
+        ranking.append(
+            {
+                "strategy_name": strategy_name,
+                "results": strategy_results,
+                "mean_return_pct": _mean(returns),
+                "min_return_pct": min(returns),
+                "max_return_pct": max(returns),
+            }
+        )
+
+    ranking.sort(key=lambda row: row["mean_return_pct"], reverse=True)
+    return ranking[:limit]
+
+
+def format_top_weekly_strategy_summary(results, limit=TOP_STRATEGY_LIMIT):
+    ranking = rank_top_weekly_strategies(results, limit=limit)
+    if not ranking:
+        return "No weekly portfolio results available."
+
+    lines = [
+        "# Top Weekly Portfolio Strategies",
+        "",
+        "Rank | Strategy | Mean Return % | Min Return % | Max Return %",
+        "--- | --- | ---: | ---: | ---:",
+    ]
+    for index, row in enumerate(ranking, start=1):
+        lines.append(
+            f"{index} | {row['strategy_name']} | "
+            f"{row['mean_return_pct']:.2f} | {row['min_return_pct']:.2f} | {row['max_return_pct']:.2f}"
+        )
+
+    lines.extend(["", "## Weekly Returns By Start Date", ""])
+    for row in ranking:
+        lines.append(f"### {row['strategy_name']}")
+        lines.append("")
+        lines.append("Start | Return % | Max Drawdown % | Ending Value USD | Trades")
+        lines.append("--- | ---: | ---: | ---: | ---:")
+        for result in sorted(row["results"], key=lambda item: item.start_timestamp):
+            lines.append(
+                f"{result.start_timestamp.date().isoformat()} | "
+                f"{float(result.total_return_pct):.2f} | "
+                f"{float(result.max_drawdown_pct):.2f} | "
+                f"{float(result.ending_value):.2f} | "
+                f"{result.trade_count}"
+            )
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_top_weekly_strategy_summary(results, output_path, limit=TOP_STRATEGY_LIMIT):
+    output_path = Path(output_path)
+    output_path.write_text(format_top_weekly_strategy_summary(results, limit=limit))
+    return output_path
+
+
+def _render_stacked_band(allocation_curve, key, lower_values, upper_values, min_y, max_y, plot_left, plot_right, plot_top, plot_bottom):
+    top_points = []
+    bottom_points = []
+    max_x = max(len(allocation_curve) - 1, 1)
+
+    for index, point in enumerate(allocation_curve):
+        x = scale(index, 0, max_x, plot_left, plot_right)
+        top_y = scale(upper_values[index], min_y, max_y, plot_bottom, plot_top)
+        bottom_y = scale(lower_values[index], min_y, max_y, plot_bottom, plot_top)
+        top_points.append(f"{x},{top_y}")
+        bottom_points.append(f"{x},{bottom_y}")
+
+    color = ASSET_COLORS[key]
+    polygon = " ".join(top_points + list(reversed(bottom_points)))
+    return f'<polygon points="{polygon}" fill="{color}" fill-opacity="0.70" stroke="{color}" stroke-width="1.2"/>'
+
+
+def render_weekly_allocation_action_svg(result, output_path):
+    allocation_curve = result.allocation_curve
+    if not allocation_curve:
+        raise ValueError("No allocation curve points to plot")
+
+    plot_left = LINE_PADDING
+    plot_right = LINE_WIDTH - LINE_PADDING
+    plot_top = LINE_PADDING
+    plot_bottom = 560
+    action_top = 650
+    action_bottom = 735
+
+    totals = [float(point.total_value) for point in allocation_curve]
+    max_total = max(totals)
+    max_x = max(len(allocation_curve) - 1, 1)
+
+    dai_values = [float(point.dai_value) for point in allocation_curve]
+    eth_values = [float(point.eth_value) for point in allocation_curve]
+    btc_values = [float(point.btc_value) for point in allocation_curve]
+    dai_upper = dai_values
+    eth_upper = [dai_values[index] + eth_values[index] for index in range(len(allocation_curve))]
+    btc_upper = [eth_upper[index] + btc_values[index] for index in range(len(allocation_curve))]
+
+    elements = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{LINE_WIDTH}" height="{LINE_HEIGHT}">',
+        f'<rect width="{LINE_WIDTH}" height="{LINE_HEIGHT}" fill="#f8fafc"/>',
+        f'<text x="{LINE_WIDTH / 2}" y="42" text-anchor="middle" font-family="monospace" font-size="24" fill="#0f172a">'
+        f'{result.strategy_name} | weekly | start={result.start_timestamp.date().isoformat()} | return={float(result.total_return_pct):.2f}%</text>',
+        f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_right}" y2="{plot_bottom}" stroke="#334155" stroke-width="2"/>',
+        f'<line x1="{plot_left}" y1="{plot_top}" x2="{plot_left}" y2="{plot_bottom}" stroke="#334155" stroke-width="2"/>',
+        f'<line x1="{plot_left}" y1="{action_bottom}" x2="{plot_right}" y2="{action_bottom}" stroke="#334155" stroke-width="2"/>',
+        f'<line x1="{plot_left}" y1="{action_top}" x2="{plot_left}" y2="{action_bottom}" stroke="#334155" stroke-width="2"/>',
+    ]
+
+    for tick in range(6):
+        index_value = max_x * tick / 5 if max_x else 0
+        x_pos = scale(index_value, 0, max_x, plot_left, plot_right)
+        total_value = max_total * tick / 5 if max_total else 0
+        y_pos = scale(total_value, 0, max_total, plot_bottom, plot_top) if max_total else (plot_top + plot_bottom) / 2
+        elements.append(f'<line x1="{x_pos}" y1="{plot_bottom}" x2="{x_pos}" y2="{plot_top}" stroke="#cbd5e1" stroke-width="1"/>')
+        elements.append(f'<line x1="{x_pos}" y1="{action_bottom}" x2="{x_pos}" y2="{action_top}" stroke="#e2e8f0" stroke-width="1"/>')
+        date_label = allocation_curve[int(round(index_value))].timestamp.date().isoformat()
+        elements.append(
+            f'<text x="{x_pos}" y="{action_bottom + 22}" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">{date_label}</text>'
+        )
+        elements.append(f'<line x1="{plot_left}" y1="{y_pos}" x2="{plot_right}" y2="{y_pos}" stroke="#cbd5e1" stroke-width="1"/>')
+        elements.append(
+            f'<text x="{plot_left - 12}" y="{y_pos + 4}" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">{total_value:.0f}</text>'
+        )
+
+    elements.append(_render_stacked_band(allocation_curve, "DAI", [0.0] * len(allocation_curve), dai_upper, 0, max_total, plot_left, plot_right, plot_top, plot_bottom))
+    elements.append(_render_stacked_band(allocation_curve, "ETH-USD", dai_upper, eth_upper, 0, max_total, plot_left, plot_right, plot_top, plot_bottom))
+    elements.append(_render_stacked_band(allocation_curve, "BTC-USD", eth_upper, btc_upper, 0, max_total, plot_left, plot_right, plot_top, plot_bottom))
+
+    legend_x = LINE_WIDTH - 300
+    legend_y = 86
+    for index, asset in enumerate(["BTC-USD", "ETH-USD", "DAI"]):
+        y = legend_y + (index * 22)
+        color = ASSET_COLORS[asset]
+        label = asset.replace("-USD", "")
+        elements.append(f'<rect x="{legend_x}" y="{y - 10}" width="16" height="12" fill="{color}" fill-opacity="0.70" stroke="{color}"/>')
+        elements.append(f'<text x="{legend_x + 24}" y="{y}" font-family="monospace" font-size="12" fill="#0f172a">{label}</text>')
+
+    elements.append(
+        f'<text x="{LINE_WIDTH / 2}" y="{LINE_HEIGHT - 18}" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">time</text>'
+    )
+    elements.append(
+        f'<text x="24" y="{(plot_top + plot_bottom) / 2}" transform="rotate(-90 24,{(plot_top + plot_bottom) / 2})" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">asset value split (usd)</text>'
+    )
+    elements.append(
+        f'<text x="24" y="{(action_top + action_bottom) / 2}" transform="rotate(-90 24,{(action_top + action_bottom) / 2})" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">weekly action</text>'
+    )
+
+    for index, point in enumerate(allocation_curve):
+        x = scale(index, 0, max_x, plot_left, plot_right)
+        action = point.action
+        color = ACTION_COLORS.get(action, "#334155")
+        marker_top = action_top + 12
+        marker_bottom = action_bottom - 16
+        elements.append(
+            f'<line x1="{x}" y1="{marker_bottom}" x2="{x}" y2="{marker_top}" stroke="{color}" stroke-width="2.6">'
+            f"<title>{point.timestamp.date().isoformat()} | action={action} | reason={point.decision_reason} | "
+            f"DAI={float(point.dai_value):.2f} | BTC={float(point.btc_value):.2f} | ETH={float(point.eth_value):.2f}</title>"
+            f"</line>"
+        )
+        elements.append(
+            f'<circle cx="{x}" cy="{marker_top}" r="4" fill="{color}" stroke="#ffffff" stroke-width="1"/>'
+        )
+
+    legend_action_x = LINE_WIDTH - 450
+    legend_action_y = action_top + 12
+    for index, action in enumerate(["hold", "buy_btc", "buy_eth", "buy_btc+buy_eth", "sell_btc", "sell_eth"]):
+        x = legend_action_x + (index % 3) * 140
+        y = legend_action_y + (index // 3) * 22
+        color = ACTION_COLORS[action]
+        elements.append(f'<circle cx="{x}" cy="{y - 4}" r="4" fill="{color}" stroke="#ffffff" stroke-width="1"/>')
+        elements.append(f'<text x="{x + 10}" y="{y}" font-family="monospace" font-size="11" fill="#0f172a">{action}</text>')
+
+    elements.append("</svg>")
+    output_path.write_text("\n".join(elements))
+
+
+def write_top_weekly_strategy_plots(results, output_dir, limit=TOP_STRATEGY_LIMIT):
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    ranking = rank_top_weekly_strategies(results, limit=limit)
+    if not ranking:
+        return []
+
+    keep_names = {row["strategy_name"] for row in ranking}
+    written = []
+    for result in sorted(_weekly_results(results), key=lambda item: (item.strategy_name, item.start_timestamp)):
+        if result.strategy_name not in keep_names:
+            continue
+        output_path = output_dir / (
+            f"weekly_strategy_{sanitize_filename(result.strategy_name)}_"
+            f"{result.start_timestamp.date().isoformat()}.svg"
+        )
+        render_weekly_allocation_action_svg(result, output_path)
+        written.append(output_path)
+    return written
+
+
 def copy_outputs_to_latest(paths, latest_dir):
     latest_dir = Path(latest_dir)
     latest_dir.mkdir(parents=True, exist_ok=True)
@@ -319,10 +550,17 @@ def main():
     )
     manifest = build_manifest(args, since_dates, interval_days_options)
     saved_paths = save_results(args.output_dir, results, manifest)
-    plot_paths = write_equity_curve_plots(results, saved_paths["run_dir"])
-    copy_outputs_to_latest(plot_paths, saved_paths["latest_dir"])
+    run_dir = Path(saved_paths["run_dir"])
+    latest_dir = Path(saved_paths["latest_dir"])
+    plot_paths = write_equity_curve_plots(results, run_dir)
+    weekly_plot_paths = write_top_weekly_strategy_plots(results, run_dir)
+    weekly_summary_path = write_top_weekly_strategy_summary(results, run_dir / "weekly_top3_summary.md")
+    copy_outputs_to_latest(plot_paths, latest_dir)
+    copy_outputs_to_latest(weekly_plot_paths + [weekly_summary_path], latest_dir)
 
     print(format_results_table(results))
+    print()
+    print(format_top_weekly_strategy_summary(results))
     print()
     print(f"Run directory: {saved_paths['run_dir']}")
     print(f"Latest directory: {saved_paths['latest_dir']}")
@@ -331,6 +569,8 @@ def main():
     print(f"Saved Text: {saved_paths['text']}")
     print(f"Saved Manifest: {saved_paths['manifest']}")
     print(f"Saved equity curve plots: {len(plot_paths)}")
+    print(f"Saved weekly top strategy plots: {len(weekly_plot_paths)}")
+    print(f"Saved weekly top strategy summary: {weekly_summary_path}")
 
 
 if __name__ == "__main__":

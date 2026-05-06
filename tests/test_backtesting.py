@@ -353,6 +353,8 @@ def test_portfolio_management_engine_can_buy_and_withdraw():
     assert result.total_withdrawn_dai == Decimal("200")
     assert result.realized_value == result.ending_value + result.total_withdrawn_dai
     assert result.turnover_pct >= 0
+    assert len(result.allocation_curve) == len(result.equity_curve)
+    assert result.allocation_curve[0].total_value == result.equity_curve[0].portfolio_value
 
 
 def test_portfolio_reporting_uses_portfolio_specific_columns():
