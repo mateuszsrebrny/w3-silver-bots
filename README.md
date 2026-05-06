@@ -184,6 +184,10 @@ CI is configured in GitHub Actions and runs the test suite on pushes and pull re
 - [BUSINESS_LOGIC.md](BUSINESS_LOGIC.md)
   - strategy intent, assumptions, limitations, and interpretation guidance
 
+- [reports/portfolio_backtests/latest/README.md](reports/portfolio_backtests/latest/README.md)
+  - how to read the current portfolio-backtest report set
+  - explains the files, chart types, and cap-specific folders
+
 ## Current Scope And Limits
 
 - Live valuation depends on:
