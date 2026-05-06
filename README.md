@@ -154,6 +154,17 @@ Outputs go under [reports/portfolio_backtests](reports/portfolio_backtests) and 
 - text tables
 - manifest metadata
 - SVG wallet-value charts per `(start date, interval)` scenario
+- weekly `allocation/trade charts`
+- strategy catalog and negative-window summaries for denser portfolio sweeps
+
+Useful flags:
+
+```bash
+.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-trade-dai 500
+.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-trade-dai 100 --quarterly-starts --quarterly-starts-from 2020-01-01
+```
+
+These are useful when you want to limit per-trade sizing and compare strategies across denser starting points.
 
 ## Tests
 

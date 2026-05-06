@@ -220,6 +220,33 @@ Business interpretation:
 - for portfolio-management research, the best strategy depends materially on the start date
 - strategies that keep both BTC and ETH but lean conditionally often do better than naive symmetric cash-band logic
 
+### Effect Of Buy Caps
+
+The portfolio-management runner now also supports a per-buy cap, for example:
+
+- `max_buy_trade_dai = 500`
+- `max_buy_trade_dai = 100`
+
+Interpretation:
+
+- the cap applies to each individual buy trade
+- if a weekly rebalance buys both `BTC` and `ETH`, each leg is capped separately
+- sells are not capped in the current model
+
+Observed effect:
+
+- a `500 DAI` cap reduces performance, but the leading strategy family remains broadly the same
+- a `100 DAI` cap degrades returns much more strongly and compresses the gap between strategies
+- aggressive drawdown-buying styles are hurt most because they cannot express as much conviction in weak regimes
+
+In the current weekly `500 DAI` cap wrap-up:
+
+- `btc_defensive_eth_aggressive` remained the top strategy by mean return
+- `static_50_50_rebalance` stayed second
+- `narrow_cash_band_rebalance` moved into third place
+
+So the `500 DAI` cap acts more like a moderation constraint than a full strategy inversion.
+
 ### Why Start Date Matters
 
 The tested start dates span very different crypto regimes:
@@ -274,6 +301,14 @@ The natural baseline is:
 - `static_50_50_rebalance`
 
 Then compare whether tactical strategies beat it without exploding turnover or drawdown.
+
+If trade-size comfort matters, compare that baseline under:
+
+- uncapped weekly execution
+- `500 DAI` capped weekly execution
+- `100 DAI` capped weekly execution
+
+That gives a much more realistic picture of whether the tactical edge survives practical sizing limits.
 
 ### If The Goal Is "Eventually Withdraw Cash"
 

@@ -110,6 +110,7 @@ The backtesting layer has three engines because the state machines are different
   - no recurring contributions by default
   - starts from an initial portfolio
   - supports buys, sells, rebalancing, and optional DAI withdrawals
+  - supports optional per-buy caps such as `max_buy_trade_dai`
 
 ## Core Data Models
 
@@ -154,6 +155,12 @@ This split exists because portfolio-management results need different accounting
 - `turnover_pct`
 
 Reusing DCA metrics like `deployment_pct` for rebalancing strategies was explicitly removed because it produced misleading summaries.
+
+The portfolio engine also records a richer `allocation_curve` so portfolio experiments can render:
+
+- BTC/ETH/DAI value split over time
+- signed BTC weekly trade notional
+- signed ETH weekly trade notional
 
 ## Strategy Interfaces
 
@@ -245,6 +252,9 @@ Saved under [reports/portfolio_backtests](reports/portfolio_backtests):
 - text table
 - manifest
 - one equity-curve SVG per `(start, interval)` scenario
+- weekly allocation/trade SVGs for the top strategies
+- strategy catalog summaries
+- negative-window summaries
 
 The `latest/` directory mirrors the most recent run for quick inspection.
 
