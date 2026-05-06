@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+from calendar import monthrange
 from datetime import datetime, timezone
 from pathlib import Path
 import shutil
@@ -38,6 +39,15 @@ DEFAULT_SINCE_DATES = ["2020-01-01", "2021-01-01", "2022-01-01", "2023-01-01"]
 DEFAULT_INTERVAL_DAYS = [1, 2, 3, 5, 7]
 WEEKLY_INTERVAL = "7d"
 TOP_STRATEGY_LIMIT = 3
+ANNUALIZATION_DAYS = 365.2425
+MIN_QUARTERLY_WINDOW_DAYS = 90
+STRATEGY_DESCRIPTIONS = {
+    "static_50_50_rebalance": "Keeps a simple balanced BTC/ETH risk bucket with a fixed DAI cash reserve. It is the plain benchmark.",
+    "target_50_50_with_cash_band": "Uses broad cheap/neutral/expensive regime bands to raise or lower DAI. It is the more defensive cash-timing version.",
+    "narrow_cash_band_rebalance": "Same cash-band idea as above, but with narrower DAI swings so it stays more invested for longer.",
+    "drawdown_tilt_rebalance": "Deploys more risk in larger drawdowns and tilts toward the more discounted asset. This is the main contrarian strategy.",
+    "btc_defensive_eth_aggressive": "Treats BTC as the defensive anchor and only leans harder into ETH when ETH momentum and regime are stronger.",
+}
 
 LINE_WIDTH = 1400
 LINE_HEIGHT = 800
@@ -98,11 +108,20 @@ def parse_args():
     parser.add_argument("--withdrawal-dai", default="0")
     parser.add_argument("--withdrawal-interval-days", type=int)
     parser.add_argument("--max-buy-trade-dai")
+    parser.add_argument("--quarterly-starts", action="store_true")
+    parser.add_argument("--quarterly-starts-from")
     return parser.parse_args()
 
 
 def parse_since(value):
     return datetime.fromisoformat(value).replace(tzinfo=UTC)
+
+
+def add_months(timestamp, months):
+    year = timestamp.year + ((timestamp.month - 1 + months) // 12)
+    month = ((timestamp.month - 1 + months) % 12) + 1
+    day = min(timestamp.day, monthrange(year, month)[1])
+    return timestamp.replace(year=year, month=month, day=day)
 
 
 def build_bundle(data_root):
@@ -113,6 +132,20 @@ def build_bundle(data_root):
             "ETH-USD": PriceSeries.from_csv(root / "ETH-USD-1d.csv"),
         }
     )
+
+
+def build_quarterly_since_dates(bundle, start=None, min_window_days=MIN_QUARTERLY_WINDOW_DAYS):
+    first_timestamp = bundle.common_timestamps_since(datetime(1970, 1, 1, tzinfo=UTC))[0]
+    last_timestamp = bundle.common_timestamps_since(first_timestamp)[-1]
+    start = start or first_timestamp
+    cursor = start
+    dates = []
+    while cursor <= last_timestamp:
+        if (last_timestamp - cursor).days < min_window_days:
+            break
+        dates.append(cursor)
+        cursor = add_months(cursor, 3)
+    return dates
 
 
 def build_portfolio_strategies():
@@ -187,6 +220,7 @@ def build_manifest(args, since_dates, interval_days_options):
         "withdrawal_dai": str(args.withdrawal_dai),
         "withdrawal_interval_days": args.withdrawal_interval_days,
         "max_buy_trade_dai": args.max_buy_trade_dai,
+        "quarterly_starts": args.quarterly_starts,
         "data_root": str(args.data_root),
         "data_files": {
             "BTC-USD": str(Path(args.data_root) / "BTC-USD-1d.csv"),
@@ -347,6 +381,15 @@ def _mean(values):
     return sum(values) / len(values) if values else 0
 
 
+def annualized_return_pct(result):
+    duration_days = max((result.end_timestamp - result.start_timestamp).days, 1)
+    years = duration_days / ANNUALIZATION_DAYS
+    growth_multiple = float(result.realized_value / result.initial_value) if result.initial_value > 0 else 1.0
+    if growth_multiple <= 0:
+        return -100.0
+    return ((growth_multiple ** (1 / years)) - 1) * 100
+
+
 def rank_top_weekly_strategies(results, limit=TOP_STRATEGY_LIMIT):
     weekly_results = _weekly_results(results)
     strategy_rows = {}
@@ -409,6 +452,96 @@ def format_top_weekly_strategy_summary(results, limit=TOP_STRATEGY_LIMIT):
 def write_top_weekly_strategy_summary(results, output_path, limit=TOP_STRATEGY_LIMIT):
     output_path = Path(output_path)
     output_path.write_text(format_top_weekly_strategy_summary(results, limit=limit))
+    return output_path
+
+
+def format_strategy_catalog(results):
+    grouped = {}
+    for result in results:
+        grouped.setdefault(result.strategy_name, []).append(result)
+
+    lines = [
+        "# Portfolio Strategy Catalog",
+        "",
+        "This report groups every tested start date for each portfolio strategy.",
+        "",
+    ]
+    for strategy_name, strategy_results in sorted(grouped.items()):
+        sample = strategy_results[0]
+        lines.append(f"## {strategy_name}")
+        lines.append("")
+        lines.append(STRATEGY_DESCRIPTIONS.get(strategy_name, "No description available."))
+        lines.append("")
+        lines.append(f"`{sample.strategy_label}`")
+        lines.append("")
+        lines.append("Start | End | Years | Return % | Annualized % | Max Drawdown % | Ending Value USD | Negative?")
+        lines.append("--- | --- | ---: | ---: | ---: | ---: | ---: | ---")
+        for result in sorted(strategy_results, key=lambda item: item.start_timestamp):
+            years = (result.end_timestamp - result.start_timestamp).days / ANNUALIZATION_DAYS
+            total_return = float(result.total_return_pct)
+            lines.append(
+                f"{result.start_timestamp.date().isoformat()} | "
+                f"{result.end_timestamp.date().isoformat()} | "
+                f"{years:.2f} | "
+                f"{total_return:.2f} | "
+                f"{annualized_return_pct(result):.2f} | "
+                f"{float(result.max_drawdown_pct):.2f} | "
+                f"{float(result.ending_value):.2f} | "
+                f"{'yes' if total_return < 0 else 'no'}"
+            )
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_strategy_catalog(results, output_path):
+    output_path = Path(output_path)
+    output_path.write_text(format_strategy_catalog(results))
+    return output_path
+
+
+def format_negative_window_summary(results):
+    grouped = {}
+    for result in results:
+        grouped.setdefault(result.strategy_name, []).append(result)
+
+    lines = [
+        "# Negative Return Windows",
+        "",
+        "This report lists any tested start dates where the total return fell below zero.",
+        "",
+    ]
+    any_negative = False
+    for strategy_name, strategy_results in sorted(grouped.items()):
+        negatives = [result for result in strategy_results if float(result.total_return_pct) < 0]
+        lines.append(f"## {strategy_name}")
+        lines.append("")
+        if not negatives:
+            lines.append("No negative total-return windows in the tested start dates.")
+            lines.append("")
+            continue
+        any_negative = True
+        lines.append("Start | End | Return % | Annualized % | Max Drawdown %")
+        lines.append("--- | --- | ---: | ---: | ---:")
+        for result in sorted(negatives, key=lambda item: item.start_timestamp):
+            lines.append(
+                f"{result.start_timestamp.date().isoformat()} | "
+                f"{result.end_timestamp.date().isoformat()} | "
+                f"{float(result.total_return_pct):.2f} | "
+                f"{annualized_return_pct(result):.2f} | "
+                f"{float(result.max_drawdown_pct):.2f}"
+            )
+        lines.append("")
+
+    if not any_negative:
+        lines.append("Across the tested windows, none of the strategies finished below zero total return.")
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_negative_window_summary(results, output_path):
+    output_path = Path(output_path)
+    output_path.write_text(format_negative_window_summary(results))
     return output_path
 
 
@@ -602,9 +735,13 @@ def copy_outputs_to_latest(paths, latest_dir):
 
 def main():
     args = parse_args()
-    since_dates = [parse_since(value) for value in (args.since or DEFAULT_SINCE_DATES)]
-    interval_days_options = args.interval_days or DEFAULT_INTERVAL_DAYS
     bundle = build_bundle(args.data_root)
+    if args.quarterly_starts:
+        quarterly_start = parse_since(args.quarterly_starts_from) if args.quarterly_starts_from else None
+        since_dates = build_quarterly_since_dates(bundle, start=quarterly_start)
+    else:
+        since_dates = [parse_since(value) for value in (args.since or DEFAULT_SINCE_DATES)]
+    interval_days_options = args.interval_days or DEFAULT_INTERVAL_DAYS
     results = run_portfolio_backtests(
         bundle=bundle,
         since_dates=since_dates,
@@ -623,8 +760,13 @@ def main():
     plot_paths = write_equity_curve_plots(results, run_dir)
     weekly_plot_paths = write_top_weekly_strategy_plots(results, run_dir)
     weekly_summary_path = write_top_weekly_strategy_summary(results, run_dir / "weekly_top3_summary.md")
+    strategy_catalog_path = write_strategy_catalog(results, run_dir / "strategy_catalog.md")
+    negative_windows_path = write_negative_window_summary(results, run_dir / "negative_windows.md")
     copy_outputs_to_latest(plot_paths, latest_dir)
-    copy_outputs_to_latest(weekly_plot_paths + [weekly_summary_path], latest_dir)
+    copy_outputs_to_latest(
+        weekly_plot_paths + [weekly_summary_path, strategy_catalog_path, negative_windows_path],
+        latest_dir,
+    )
 
     print(format_results_table(results))
     print()
@@ -639,6 +781,8 @@ def main():
     print(f"Saved equity curve plots: {len(plot_paths)}")
     print(f"Saved weekly top strategy plots: {len(weekly_plot_paths)}")
     print(f"Saved weekly top strategy summary: {weekly_summary_path}")
+    print(f"Saved strategy catalog: {strategy_catalog_path}")
+    print(f"Saved negative-window summary: {negative_windows_path}")
 
 
 if __name__ == "__main__":

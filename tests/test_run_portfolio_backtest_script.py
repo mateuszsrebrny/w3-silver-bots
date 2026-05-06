@@ -126,6 +126,8 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
     monkeypatch.setattr(run_portfolio_backtest, "write_equity_curve_plots", lambda results, output_dir: [Path("a.svg"), Path("b.svg")])
     monkeypatch.setattr(run_portfolio_backtest, "write_top_weekly_strategy_plots", lambda results, output_dir: [Path("c.svg")])
     monkeypatch.setattr(run_portfolio_backtest, "write_top_weekly_strategy_summary", lambda results, output_path: Path("summary.md"))
+    monkeypatch.setattr(run_portfolio_backtest, "write_strategy_catalog", lambda results, output_path: Path("catalog.md"))
+    monkeypatch.setattr(run_portfolio_backtest, "write_negative_window_summary", lambda results, output_path: Path("negative.md"))
     monkeypatch.setattr(run_portfolio_backtest, "copy_outputs_to_latest", lambda paths, latest_dir: None)
     monkeypatch.setattr(run_portfolio_backtest, "format_results_table", lambda results: "portfolio-table")
     monkeypatch.setattr(run_portfolio_backtest, "format_top_weekly_strategy_summary", lambda results: "weekly-summary")
@@ -183,6 +185,8 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
     assert "weekly-summary" in output
     assert "Saved equity curve plots: 2" in output
     assert "Saved weekly top strategy plots: 1" in output
+    assert "Saved strategy catalog:" in output
+    assert "Saved negative-window summary:" in output
 
 
 def test_save_results_creates_manifest_and_latest_snapshot(tmp_path):
@@ -222,6 +226,37 @@ def test_rank_top_weekly_strategies_prefers_highest_mean_return():
     ranking = run_portfolio_backtest.rank_top_weekly_strategies(results, limit=2)
 
     assert [row["strategy_name"] for row in ranking] == ["a", "b"]
+
+
+def test_build_quarterly_since_dates_advances_in_3_month_steps():
+    class FakeBundle:
+        def common_timestamps_since(self, since):
+            return [
+                datetime(2020, 1, 1, tzinfo=UTC),
+                datetime(2020, 1, 2, tzinfo=UTC),
+                datetime(2021, 1, 15, tzinfo=UTC),
+            ]
+
+    since_dates = run_portfolio_backtest.build_quarterly_since_dates(FakeBundle(), start=datetime(2020, 1, 1, tzinfo=UTC))
+
+    assert since_dates[:4] == [
+        datetime(2020, 1, 1, tzinfo=UTC),
+        datetime(2020, 4, 1, tzinfo=UTC),
+        datetime(2020, 7, 1, tzinfo=UTC),
+        datetime(2020, 10, 1, tzinfo=UTC),
+    ]
+    assert since_dates[-1] == datetime(2020, 10, 1, tzinfo=UTC)
+
+
+def test_strategy_catalog_marks_negative_windows():
+    result = dataclass_replace(make_fake_result(), total_return_pct=Decimal("-5"))
+
+    markdown = run_portfolio_backtest.format_strategy_catalog([result])
+    negative_summary = run_portfolio_backtest.format_negative_window_summary([result])
+
+    assert "Annualized %" in markdown
+    assert "yes" in markdown
+    assert "2020-01-01" in negative_summary
 
 
 def test_write_top_weekly_strategy_plots_writes_top3_weekly_only(tmp_path):
