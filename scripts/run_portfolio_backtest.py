@@ -65,6 +65,16 @@ ACTION_COLORS = {
     "buy_btc+sell_eth": "#0891b2",
     "sell_btc+buy_eth": "#c026d3",
 }
+TRADE_PANEL_COLORS = {
+    "BTC-USD": {
+        "buy": "#ea580c",
+        "sell": "#dc2626",
+    },
+    "ETH-USD": {
+        "buy": "#2563eb",
+        "sell": "#7c3aed",
+    },
+}
 
 
 def parse_args():
@@ -221,6 +231,18 @@ def scale(value, min_value, max_value, out_min, out_max):
         return (out_min + out_max) / 2
     ratio = (value - min_value) / (max_value - min_value)
     return out_min + (ratio * (out_max - out_min))
+
+
+def _monthly_tick_indices(allocation_curve):
+    ticks = []
+    seen = set()
+    for index, point in enumerate(allocation_curve):
+        key = (point.timestamp.year, point.timestamp.month)
+        if key in seen:
+            continue
+        seen.add(key)
+        ticks.append((index, point.timestamp.strftime("%Y-%m")))
+    return ticks
 
 
 def render_equity_curve_svg(results, title, output_path):
@@ -403,6 +425,54 @@ def _render_stacked_band(allocation_curve, key, lower_values, upper_values, min_
     return f'<polygon points="{polygon}" fill="{color}" fill-opacity="0.70" stroke="{color}" stroke-width="1.2"/>'
 
 
+def _build_trade_notional_series(result, symbol):
+    by_timestamp = {}
+    for trade in result.trades:
+        if trade.symbol != symbol:
+            continue
+        signed = trade.notional_usd if trade.side == "buy" else -trade.notional_usd
+        by_timestamp[trade.timestamp] = by_timestamp.get(trade.timestamp, 0) + float(signed)
+    return [by_timestamp.get(point.timestamp, 0.0) for point in result.allocation_curve]
+
+
+def _render_trade_notional_panel(elements, allocation_curve, series, symbol, plot_left, plot_right, plot_top, plot_bottom):
+    max_x = max(len(allocation_curve) - 1, 1)
+    abs_max = max([abs(value) for value in series] + [1.0])
+    zero_y = scale(0.0, -abs_max, abs_max, plot_bottom, plot_top)
+    asset_label = symbol.replace("-USD", "")
+
+    elements.append(f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_right}" y2="{plot_bottom}" stroke="#334155" stroke-width="2"/>')
+    elements.append(f'<line x1="{plot_left}" y1="{plot_top}" x2="{plot_left}" y2="{plot_bottom}" stroke="#334155" stroke-width="2"/>')
+    elements.append(f'<line x1="{plot_left}" y1="{zero_y}" x2="{plot_right}" y2="{zero_y}" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>')
+
+    for tick in range(3):
+        y_value = -abs_max + ((2 * abs_max) * tick / 2)
+        y_pos = scale(y_value, -abs_max, abs_max, plot_bottom, plot_top)
+        elements.append(f'<line x1="{plot_left}" y1="{y_pos}" x2="{plot_right}" y2="{y_pos}" stroke="#e2e8f0" stroke-width="1"/>')
+        elements.append(
+            f'<text x="{plot_left - 12}" y="{y_pos + 4}" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">{y_value:.0f}</text>'
+        )
+
+    bar_width = max(4, ((plot_right - plot_left) / max(len(allocation_curve), 2)) * 0.55)
+    for index, value in enumerate(series):
+        x = scale(index, 0, max_x, plot_left, plot_right)
+        y_value = scale(value, -abs_max, abs_max, plot_bottom, plot_top)
+        top_y = min(y_value, zero_y)
+        height = max(abs(zero_y - y_value), 1.5)
+        side = "buy" if value >= 0 else "sell"
+        color = TRADE_PANEL_COLORS[symbol][side]
+        point = allocation_curve[index]
+        elements.append(
+            f'<rect x="{x - (bar_width / 2)}" y="{top_y}" width="{bar_width}" height="{height}" fill="{color}" opacity="0.85">'
+            f"<title>{point.timestamp.date().isoformat()} | {asset_label} {side} {abs(value):.2f} usd | reason={point.decision_reason}</title>"
+            f"</rect>"
+        )
+
+    elements.append(
+        f'<text x="24" y="{(plot_top + plot_bottom) / 2}" transform="rotate(-90 24,{(plot_top + plot_bottom) / 2})" text-anchor="middle" font-family="monospace" font-size="14" fill="#0f172a">{asset_label} weekly trade usd</text>'
+    )
+
+
 def render_weekly_allocation_action_svg(result, output_path):
     allocation_curve = result.allocation_curve
     if not allocation_curve:
@@ -411,13 +481,16 @@ def render_weekly_allocation_action_svg(result, output_path):
     plot_left = LINE_PADDING
     plot_right = LINE_WIDTH - LINE_PADDING
     plot_top = LINE_PADDING
-    plot_bottom = 560
-    action_top = 650
-    action_bottom = 735
+    plot_bottom = 420
+    btc_top = 480
+    btc_bottom = 605
+    eth_top = 645
+    eth_bottom = 770
 
     totals = [float(point.total_value) for point in allocation_curve]
     max_total = max(totals)
     max_x = max(len(allocation_curve) - 1, 1)
+    month_ticks = _monthly_tick_indices(allocation_curve)
 
     dai_values = [float(point.dai_value) for point in allocation_curve]
     eth_values = [float(point.eth_value) for point in allocation_curve]
@@ -433,21 +506,20 @@ def render_weekly_allocation_action_svg(result, output_path):
         f'{result.strategy_name} | weekly | start={result.start_timestamp.date().isoformat()} | return={float(result.total_return_pct):.2f}%</text>',
         f'<line x1="{plot_left}" y1="{plot_bottom}" x2="{plot_right}" y2="{plot_bottom}" stroke="#334155" stroke-width="2"/>',
         f'<line x1="{plot_left}" y1="{plot_top}" x2="{plot_left}" y2="{plot_bottom}" stroke="#334155" stroke-width="2"/>',
-        f'<line x1="{plot_left}" y1="{action_bottom}" x2="{plot_right}" y2="{action_bottom}" stroke="#334155" stroke-width="2"/>',
-        f'<line x1="{plot_left}" y1="{action_top}" x2="{plot_left}" y2="{action_bottom}" stroke="#334155" stroke-width="2"/>',
     ]
 
-    for tick in range(6):
-        index_value = max_x * tick / 5 if max_x else 0
+    for index_value, month_label in month_ticks:
         x_pos = scale(index_value, 0, max_x, plot_left, plot_right)
+        elements.append(f'<line x1="{x_pos}" y1="{plot_bottom}" x2="{x_pos}" y2="{plot_top}" stroke="#94a3b8" stroke-width="1.2"/>')
+        elements.append(f'<line x1="{x_pos}" y1="{btc_bottom}" x2="{x_pos}" y2="{btc_top}" stroke="#94a3b8" stroke-width="1.2"/>')
+        elements.append(f'<line x1="{x_pos}" y1="{eth_bottom}" x2="{x_pos}" y2="{eth_top}" stroke="#94a3b8" stroke-width="1.2"/>')
+        elements.append(
+            f'<text x="{x_pos}" y="{eth_bottom + 18}" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">{month_label}</text>'
+        )
+
+    for tick in range(6):
         total_value = max_total * tick / 5 if max_total else 0
         y_pos = scale(total_value, 0, max_total, plot_bottom, plot_top) if max_total else (plot_top + plot_bottom) / 2
-        elements.append(f'<line x1="{x_pos}" y1="{plot_bottom}" x2="{x_pos}" y2="{plot_top}" stroke="#cbd5e1" stroke-width="1"/>')
-        elements.append(f'<line x1="{x_pos}" y1="{action_bottom}" x2="{x_pos}" y2="{action_top}" stroke="#e2e8f0" stroke-width="1"/>')
-        date_label = allocation_curve[int(round(index_value))].timestamp.date().isoformat()
-        elements.append(
-            f'<text x="{x_pos}" y="{action_bottom + 22}" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">{date_label}</text>'
-        )
         elements.append(f'<line x1="{plot_left}" y1="{y_pos}" x2="{plot_right}" y2="{y_pos}" stroke="#cbd5e1" stroke-width="1"/>')
         elements.append(
             f'<text x="{plot_left - 12}" y="{y_pos + 4}" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">{total_value:.0f}</text>'
@@ -472,34 +544,25 @@ def render_weekly_allocation_action_svg(result, output_path):
     elements.append(
         f'<text x="24" y="{(plot_top + plot_bottom) / 2}" transform="rotate(-90 24,{(plot_top + plot_bottom) / 2})" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">asset value split (usd)</text>'
     )
-    elements.append(
-        f'<text x="24" y="{(action_top + action_bottom) / 2}" transform="rotate(-90 24,{(action_top + action_bottom) / 2})" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">weekly action</text>'
-    )
 
-    for index, point in enumerate(allocation_curve):
-        x = scale(index, 0, max_x, plot_left, plot_right)
-        action = point.action
-        color = ACTION_COLORS.get(action, "#334155")
-        marker_top = action_top + 12
-        marker_bottom = action_bottom - 16
-        elements.append(
-            f'<line x1="{x}" y1="{marker_bottom}" x2="{x}" y2="{marker_top}" stroke="{color}" stroke-width="2.6">'
-            f"<title>{point.timestamp.date().isoformat()} | action={action} | reason={point.decision_reason} | "
-            f"DAI={float(point.dai_value):.2f} | BTC={float(point.btc_value):.2f} | ETH={float(point.eth_value):.2f}</title>"
-            f"</line>"
-        )
-        elements.append(
-            f'<circle cx="{x}" cy="{marker_top}" r="4" fill="{color}" stroke="#ffffff" stroke-width="1"/>'
-        )
+    btc_series = _build_trade_notional_series(result, "BTC-USD")
+    eth_series = _build_trade_notional_series(result, "ETH-USD")
+    _render_trade_notional_panel(elements, allocation_curve, btc_series, "BTC-USD", plot_left, plot_right, btc_top, btc_bottom)
+    _render_trade_notional_panel(elements, allocation_curve, eth_series, "ETH-USD", plot_left, plot_right, eth_top, eth_bottom)
 
-    legend_action_x = LINE_WIDTH - 450
-    legend_action_y = action_top + 12
-    for index, action in enumerate(["hold", "buy_btc", "buy_eth", "buy_btc+buy_eth", "sell_btc", "sell_eth"]):
-        x = legend_action_x + (index % 3) * 140
-        y = legend_action_y + (index // 3) * 22
-        color = ACTION_COLORS[action]
-        elements.append(f'<circle cx="{x}" cy="{y - 4}" r="4" fill="{color}" stroke="#ffffff" stroke-width="1"/>')
-        elements.append(f'<text x="{x + 10}" y="{y}" font-family="monospace" font-size="11" fill="#0f172a">{action}</text>')
+    legend_action_x = LINE_WIDTH - 360
+    legend_action_y = btc_top + 8
+    legend_entries = [
+        ("BTC buy", TRADE_PANEL_COLORS["BTC-USD"]["buy"]),
+        ("BTC sell", TRADE_PANEL_COLORS["BTC-USD"]["sell"]),
+        ("ETH buy", TRADE_PANEL_COLORS["ETH-USD"]["buy"]),
+        ("ETH sell", TRADE_PANEL_COLORS["ETH-USD"]["sell"]),
+    ]
+    for index, (label, color) in enumerate(legend_entries):
+        x = legend_action_x + (index % 2) * 150
+        y = legend_action_y + (index // 2) * 20
+        elements.append(f'<rect x="{x}" y="{y - 10}" width="14" height="10" fill="{color}" opacity="0.85"/>')
+        elements.append(f'<text x="{x + 22}" y="{y}" font-family="monospace" font-size="11" fill="#0f172a">{label}</text>')
 
     elements.append("</svg>")
     output_path.write_text("\n".join(elements))

@@ -237,6 +237,9 @@ def test_write_top_weekly_strategy_plots_writes_top3_weekly_only(tmp_path):
     assert (tmp_path / "weekly_strategy_a_2020-01-01.svg").exists()
     assert (tmp_path / "weekly_strategy_b_2020-01-01.svg").exists()
     assert not (tmp_path / "weekly_strategy_d_2020-01-01.svg").exists()
+    svg_text = (tmp_path / "weekly_strategy_a_2020-01-01.svg").read_text()
+    assert "BTC weekly trade usd" in svg_text
+    assert "ETH weekly trade usd" in svg_text
 
 
 def dataclass_replace(result, **updates):

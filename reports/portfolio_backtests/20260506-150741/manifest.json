@@ -4,7 +4,7 @@
     "ETH-USD": "data/market/coinbase/ETH-USD-1d.csv"
   },
   "data_root": "data/market/coinbase",
-  "generated_at_utc": "2026-05-06T15:21:02Z",
+  "generated_at_utc": "2026-05-06T15:07:41Z",
   "git_commit": "6d0723a",
   "initial_btc": "0.5",
   "initial_dai": "10000",
