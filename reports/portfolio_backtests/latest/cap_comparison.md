@@ -41,12 +41,12 @@ Current baseline for portfolio-management strategy discussion:
 
 ## Where To Look
 
-- `cap100/weekly_top3_summary.md`
-- `cap100/strategy_catalog.md`
-- `cap100/negative_windows.md`
-- `cap500/weekly_top3_summary.md`
-- `cap500/strategy_catalog.md`
-- `cap500/negative_windows.md`
+- [cap100/weekly_top3_summary.md](cap100/weekly_top3_summary.md)
+- [cap100/strategy_catalog.md](cap100/strategy_catalog.md)
+- [cap100/negative_windows.md](cap100/negative_windows.md)
+- [cap500/weekly_top3_summary.md](cap500/weekly_top3_summary.md)
+- [cap500/strategy_catalog.md](cap500/strategy_catalog.md)
+- [cap500/negative_windows.md](cap500/negative_windows.md)
 
 Each cap folder also contains:
 
