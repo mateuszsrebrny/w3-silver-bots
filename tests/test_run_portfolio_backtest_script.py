@@ -130,7 +130,11 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
     monkeypatch.setattr(run_portfolio_backtest, "write_negative_window_summary", lambda results, output_path: Path("negative.md"))
     monkeypatch.setattr(run_portfolio_backtest, "copy_outputs_to_latest", lambda paths, latest_dir: None)
     monkeypatch.setattr(run_portfolio_backtest, "format_results_table", lambda results: "portfolio-table")
-    monkeypatch.setattr(run_portfolio_backtest, "format_top_weekly_strategy_summary", lambda results: "weekly-summary")
+    monkeypatch.setattr(
+        run_portfolio_backtest,
+        "format_top_weekly_strategy_summary",
+        lambda results, **kwargs: "weekly-summary",
+    )
 
     monkeypatch.setattr(
         sys,
@@ -179,6 +183,8 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
         "withdrawal_dai": "100",
         "withdrawal_interval_days": 30,
         "max_buy_trade_dai": "500",
+        "max_buy_step_dai": None,
+        "max_sell_step_dai": None,
     }
     output = capsys.readouterr().out
     assert "portfolio-table" in output

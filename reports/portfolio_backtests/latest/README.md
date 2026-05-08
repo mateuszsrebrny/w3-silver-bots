@@ -1,6 +1,6 @@
 # Portfolio Backtests: Latest
 
-This directory is the current "working view" of the portfolio-management backtests.
+This directory is the current working view of the portfolio-management backtests.
 
 The current baseline behind these files is:
 
@@ -10,17 +10,21 @@ The current baseline behind these files is:
 - short final start `2026-04-01` excluded
 - market data updated through `2026-05-05`
 
+The primary discussion in this directory now focuses on the **budgeted** strategies only:
+
+- `budgeted_static_50_50_rebalance`
+- `budgeted_drawdown_tilt_rebalance`
+- `budgeted_btc_defensive_eth_aggressive`
+
+Those are the strategies intended for realistic capped live execution.
+
 If you want immutable historical snapshots, use the timestamped run directories under `reports/portfolio_backtests/`.
 
 ## What To Read First
 
-- [cap_comparison.md](cap_comparison.md)
-  - top-level comparison of the current `100 DAI` and `500 DAI` max-buy variants
-  - the best place to start if you want the current conclusions
-
 - [weekly_top3_summary.md](weekly_top3_summary.md)
-  - summary for the root `latest/` view
-  - shows the top 3 strategies for the currently mirrored root result set
+  - current ranking of the primary budgeted strategies
+  - best place to start if you want the current conclusions
 
 - [strategy_catalog.md](strategy_catalog.md)
   - strategy-by-strategy table
@@ -40,10 +44,10 @@ If you want immutable historical snapshots, use the timestamped run directories 
 
 - [portfolio_strategy_results.csv](portfolio_strategy_results.csv)
   - machine-friendly raw result table
-  - use for spreadsheet work, sorting, or custom charts
+  - includes the full run, including legacy uncapped strategies still kept for reference
 
 - [portfolio_strategy_results.md](portfolio_strategy_results.md)
-  - readable Markdown export of the same result table
+  - readable Markdown export of the same full result table
 
 - [portfolio_strategy_results.txt](portfolio_strategy_results.txt)
   - plain fixed-width text table for terminal reading
@@ -60,20 +64,20 @@ Files named like:
 
 - `portfolio_value_2020-01-01_7d.svg`
 
-These compare multiple strategies on one chart for one start date.
+These compare the **primary budgeted strategies** on one chart for one start date.
 
 How to read them:
 
 - x-axis: time
 - y-axis: total portfolio value in USD
-- each line: one strategy
-- use these to compare overall growth paths and drawdown shape between strategies
+- each line: one budgeted strategy
+- use these to compare overall growth paths and drawdown shape
 
 ### Weekly Allocation/Trade Charts
 
 Files named like:
 
-- `weekly_strategy_static_50_50_rebalance_2020-01-01.svg`
+- `weekly_strategy_budgeted_btc_defensive_eth_aggressive_2020-01-01.svg`
 
 These are single-strategy charts for one start date.
 
@@ -91,26 +95,6 @@ How to read them:
   - negative bar = sell
 
 All three panels are synchronized on the same weekly timeline.
-
-## Cap-Specific Folders
-
-- [cap100](cap100)
-  - full artifact set for `max_buy_trade_dai = 100`
-
-- [cap500](cap500)
-  - full artifact set for `max_buy_trade_dai = 500`
-
-Each of those folders contains:
-
-- its own `weekly_top3_summary.md`
-- its own `strategy_catalog.md`
-- its own `negative_windows.md`
-- quarterly equity-curve charts
-- weekly allocation/trade charts
-- raw CSV/Markdown/text results
-- a manifest
-
-Use these folders when you want exact cap-specific conclusions without mixing them with the root `latest/` summary.
 
 ## Interpreting The Numbers
 
@@ -133,4 +117,5 @@ Use these folders when you want exact cap-specific conclusions without mixing th
 - These are simplified backtests, not executable historical trading reconstructions.
 - No tax model is included.
 - Execution slippage is simplified.
-- The buy cap applies per buy trade, not necessarily as a total weekly budget across both assets combined.
+- Budgeted strategies use weekly buy/sell budget fractions.
+- The primary reports focus on budgeted strategies, but the raw result tables still include the older uncapped strategies for reference.

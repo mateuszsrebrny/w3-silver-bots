@@ -44,6 +44,11 @@ It started as an older Web3 tracking script and has been refactored into a small
 - [scripts/run_portfolio_backtest.py](scripts/run_portfolio_backtest.py)
   - runs initial-portfolio BTC/ETH/DAI management experiments
   - saves CSV/Markdown/text summaries and wallet-value SVG charts
+  - primary report artifacts now focus on the budgeted live-execution strategy family
+
+- [scripts/portfolio_decision_dry_run.py](scripts/portfolio_decision_dry_run.py)
+  - evaluates one assumed `DAI/BTC/ETH` snapshot on one date
+  - prints what each portfolio strategy would buy, sell, or hold
 
 - [scripts/plot_backtest_scatter.py](scripts/plot_backtest_scatter.py)
   - generates scatter plots from saved DCA backtest CSV output
@@ -160,11 +165,20 @@ Outputs go under [reports/portfolio_backtests](reports/portfolio_backtests) and 
 Useful flags:
 
 ```bash
-.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-trade-dai 500
-.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-trade-dai 100 --quarterly-starts --quarterly-starts-from 2020-01-01
+.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-step-dai 500
+.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-step-dai 100 --quarterly-starts --quarterly-starts-from 2020-01-01
+.venv/bin/python scripts/run_portfolio_backtest.py --interval-days 7 --max-buy-step-dai 500 --quarterly-starts --quarterly-starts-from 2020-01-01
 ```
 
-These are useful when you want to limit per-trade sizing and compare strategies across denser starting points.
+These are useful when you want to limit total weekly buy deployment and compare strategies across denser starting points.
+
+For a one-date decision dry-run with assumed holdings:
+
+```bash
+.venv/bin/python scripts/portfolio_decision_dry_run.py --date 2026-05-04 --dai 10000 --btc 0 --eth 0 --max-buy-step-dai 100
+```
+
+This is useful when you want to ask "what would each strategy do on this date?" without rerunning the whole backtest matrix.
 
 ## Tests
 

@@ -4,15 +4,17 @@
     "ETH-USD": "data/market/coinbase/ETH-USD-1d.csv"
   },
   "data_root": "data/market/coinbase",
-  "generated_at_utc": "2026-05-06T20:26:12Z",
-  "git_commit": "24d8c1a",
+  "generated_at_utc": "2026-05-08T05:05:46Z",
+  "git_commit": "4dc01ff",
   "initial_btc": "0",
   "initial_dai": "10000",
   "initial_eth": "0",
   "interval_days_options": [
     7
   ],
-  "max_buy_trade_dai": "500",
+  "max_buy_step_dai": "500",
+  "max_buy_trade_dai": null,
+  "max_sell_step_dai": null,
   "quarterly_starts": true,
   "since_dates": [
     "2020-01-01",

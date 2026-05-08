@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800">
+<rect width="1400" height="800" fill="#f8fafc"/>
+<text x="700.0" y="42" text-anchor="middle" font-family="monospace" font-size="24" fill="#0f172a">budgeted_static_50_50_rebalance | weekly | start=2025-10-01 | return=-12.49%</text>
+<line x1="90" y1="420" x2="1310" y2="420" stroke="#334155" stroke-width="2"/>
+<line x1="90" y1="90" x2="90" y2="420" stroke="#334155" stroke-width="2"/>
+<line x1="90.0" y1="420" x2="90.0" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="90.0" y1="605" x2="90.0" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="90.0" y1="770" x2="90.0" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="90.0" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2025-10</text>
+<line x1="293.3333333333333" y1="420" x2="293.3333333333333" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="293.3333333333333" y1="605" x2="293.3333333333333" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="293.3333333333333" y1="770" x2="293.3333333333333" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="293.3333333333333" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2025-11</text>
+<line x1="456.0" y1="420" x2="456.0" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="456.0" y1="605" x2="456.0" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="456.0" y1="770" x2="456.0" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="456.0" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2025-12</text>
+<line x1="659.3333333333334" y1="420" x2="659.3333333333334" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="659.3333333333334" y1="605" x2="659.3333333333334" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="659.3333333333334" y1="770" x2="659.3333333333334" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="659.3333333333334" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2026-01</text>
+<line x1="822.0" y1="420" x2="822.0" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="822.0" y1="605" x2="822.0" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="822.0" y1="770" x2="822.0" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="822.0" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2026-02</text>
+<line x1="984.6666666666666" y1="420" x2="984.6666666666666" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="984.6666666666666" y1="605" x2="984.6666666666666" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="984.6666666666666" y1="770" x2="984.6666666666666" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="984.6666666666666" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2026-03</text>
+<line x1="1147.3333333333333" y1="420" x2="1147.3333333333333" y2="90" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1147.3333333333333" y1="605" x2="1147.3333333333333" y2="480" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="1147.3333333333333" y1="770" x2="1147.3333333333333" y2="645" stroke="#94a3b8" stroke-width="1.2"/>
+<text x="1147.3333333333333" y="788" text-anchor="middle" font-family="monospace" font-size="11" fill="#334155">2026-04</text>
+<line x1="90" y1="420.0" x2="1310" y2="420.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="424.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">0</text>
+<line x1="90" y1="354.0" x2="1310" y2="354.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="358.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">2002</text>
+<line x1="90" y1="288.0" x2="1310" y2="288.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="292.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">4005</text>
+<line x1="90" y1="221.99999999999997" x2="1310" y2="221.99999999999997" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="225.99999999999997" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">6007</text>
+<line x1="90" y1="156.0" x2="1310" y2="156.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="160.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">8010</text>
+<line x1="90" y1="90.0" x2="1310" y2="90.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="94.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">10012</text>
+<polygon points="90.0,100.28414959097569 130.66666666666666,110.17226867579092 171.33333333333331,120.06038776060609 212.0,129.94850684542126 252.66666666666666,139.8366259302365 293.3333333333333,149.7247450150516 334.0,159.61286409986684 374.6666666666667,169.50098318468204 415.3333333333333,179.3891022694972 456.0,189.2772213543124 496.66666666666663,199.16534043912756 537.3333333333333,209.05345952394276 578.0,218.9415786087579 618.6666666666666,228.8296976935731 659.3333333333334,238.7178167783883 700.0,248.60593586320348 740.6666666666666,258.4940549480187 781.3333333333334,268.38217403283386 822.0,278.27029311764903 862.6666666666666,288.1584122024642 903.3333333333333,298.0465312872794 944.0,307.93465037209455 984.6666666666666,317.8227694569098 1025.3333333333335,327.71088854172496 1066.0,337.59900762654013 1106.6666666666667,347.4871267113553 1147.3333333333333,356.62359792436496 1188.0,360.4937280513308 1228.6666666666667,361.0038191637582 1269.3333333333333,361.4453440011454 1310.0,362.58245406254963 1310.0,420.0 1269.3333333333333,420.0 1228.6666666666667,420.0 1188.0,420.0 1147.3333333333333,420.0 1106.6666666666667,420.0 1066.0,420.0 1025.3333333333335,420.0 984.6666666666666,420.0 944.0,420.0 903.3333333333333,420.0 862.6666666666666,420.0 822.0,420.0 781.3333333333334,420.0 740.6666666666666,420.0 700.0,420.0 659.3333333333334,420.0 618.6666666666666,420.0 578.0,420.0 537.3333333333333,420.0 496.66666666666663,420.0 456.0,420.0 415.3333333333333,420.0 374.6666666666667,420.0 334.0,420.0 293.3333333333333,420.0 252.66666666666666,420.0 212.0,420.0 171.33333333333331,420.0 130.66666666666666,420.0 90.0,420.0" fill="#facc15" fill-opacity="0.70" stroke="#facc15" stroke-width="1.2"/>
+<polygon points="90.0,95.34009004856813 130.66666666666666,100.08325157282917 171.33333333333331,106.23018010153453 212.0,111.80343565536577 252.66666666666666,116.27991441148163 293.3333333333333,124.12201301684019 334.0,129.139578091126 374.6666666666667,137.57327633290532 415.3333333333333,142.48216692165067 456.0,145.43407169476762 496.66666666666663,148.51941667337633 537.3333333333333,160.96923312974207 578.0,163.99790299193296 618.6666666666666,168.53581809017518 659.3333333333334,169.4397462924513 700.0,170.2437187199218 740.6666666666666,183.95220410827704 781.3333333333334,188.2315512809666 822.0,216.17428594346407 862.6666666666666,227.0313956705611 903.3333333333333,231.48503969452972 944.0,232.9325108887573 984.6666666666666,235.32876264975482 1025.3333333333335,243.1947619992639 1066.0,241.91125245615515 1106.6666666666667,248.39649859561058 1147.3333333333333,253.47298679725415 1188.0,252.07664545394564 1228.6666666666667,244.09277026209406 1269.3333333333333,242.94709355054727 1310.0,248.7225118176827 1310.0,362.58245406254963 1269.3333333333333,361.4453440011454 1228.6666666666667,361.0038191637582 1188.0,360.4937280513308 1147.3333333333333,356.62359792436496 1106.6666666666667,347.4871267113553 1066.0,337.59900762654013 1025.3333333333335,327.71088854172496 984.6666666666666,317.8227694569098 944.0,307.93465037209455 903.3333333333333,298.0465312872794 862.6666666666666,288.1584122024642 822.0,278.27029311764903 781.3333333333334,268.38217403283386 740.6666666666666,258.4940549480187 700.0,248.60593586320348 659.3333333333334,238.7178167783883 618.6666666666666,228.8296976935731 578.0,218.9415786087579 537.3333333333333,209.05345952394276 496.66666666666663,199.16534043912756 456.0,189.2772213543124 415.3333333333333,179.3891022694972 374.6666666666667,169.50098318468204 334.0,159.61286409986684 293.3333333333333,149.7247450150516 252.66666666666666,139.8366259302365 212.0,129.94850684542126 171.33333333333331,120.06038776060609 130.66666666666666,110.17226867579092 90.0,100.28414959097569" fill="#2563eb" fill-opacity="0.70" stroke="#2563eb" stroke-width="1.2"/>
+<polygon points="90.0,90.39603050616057 130.66666666666666,90.0 171.33333333333331,92.22793685417389 212.0,93.26380708569025 252.66666666666666,92.37469635259959 293.3333333333333,96.61171673469107 334.0,97.27584781997041 374.6666666666667,103.95609460475117 415.3333333333333,104.28581969768817 456.0,101.03338463229198 496.66666666666663,99.84830225045079 537.3333333333333,110.43512147789238 578.0,107.69951894859872 618.6666666666666,107.36476197994097 659.3333333333334,100.68072738577723 700.0,92.26546331015561 740.6666666666666,107.13547473845358 781.3333333333334,106.64380773345283 822.0,144.43366076933944 862.6666666666666,156.21689610990722 903.3333333333333,156.36583502666326 944.0,151.0903454529593 984.6666666666666,142.8965295372936 1025.3333333333335,148.96628920462075 1066.0,141.34690136828544 1106.6666666666667,142.80832250972702 1147.3333333333333,148.80034568687296 1188.0,141.81929089148264 1228.6666666666667,127.5695513809282 1269.3333333333333,121.5953067380729 1310.0,131.5599656854746 1310.0,248.7225118176827 1269.3333333333333,242.94709355054727 1228.6666666666667,244.09277026209406 1188.0,252.07664545394564 1147.3333333333333,253.47298679725415 1106.6666666666667,248.39649859561058 1066.0,241.91125245615515 1025.3333333333335,243.1947619992639 984.6666666666666,235.32876264975482 944.0,232.9325108887573 903.3333333333333,231.48503969452972 862.6666666666666,227.0313956705611 822.0,216.17428594346407 781.3333333333334,188.2315512809666 740.6666666666666,183.95220410827704 700.0,170.2437187199218 659.3333333333334,169.4397462924513 618.6666666666666,168.53581809017518 578.0,163.99790299193296 537.3333333333333,160.96923312974207 496.66666666666663,148.51941667337633 456.0,145.43407169476762 415.3333333333333,142.48216692165067 374.6666666666667,137.57327633290532 334.0,129.139578091126 293.3333333333333,124.12201301684019 252.66666666666666,116.27991441148163 212.0,111.80343565536577 171.33333333333331,106.23018010153453 130.66666666666666,100.08325157282917 90.0,95.34009004856813" fill="#f97316" fill-opacity="0.70" stroke="#f97316" stroke-width="1.2"/>
+<rect x="1100" y="76" width="16" height="12" fill="#f97316" fill-opacity="0.70" stroke="#f97316"/>
+<text x="1124" y="86" font-family="monospace" font-size="12" fill="#0f172a">BTC</text>
+<rect x="1100" y="98" width="16" height="12" fill="#2563eb" fill-opacity="0.70" stroke="#2563eb"/>
+<text x="1124" y="108" font-family="monospace" font-size="12" fill="#0f172a">ETH</text>
+<rect x="1100" y="120" width="16" height="12" fill="#facc15" fill-opacity="0.70" stroke="#facc15"/>
+<text x="1124" y="130" font-family="monospace" font-size="12" fill="#0f172a">DAI</text>
+<text x="700.0" y="782" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">time</text>
+<text x="24" y="255.0" transform="rotate(-90 24,255.0)" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">asset value split (usd)</text>
+<line x1="90" y1="605" x2="1310" y2="605" stroke="#334155" stroke-width="2"/>
+<line x1="90" y1="480" x2="90" y2="605" stroke="#334155" stroke-width="2"/>
+<line x1="90" y1="542.5" x2="1310" y2="542.5" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<line x1="90" y1="605.0" x2="1310" y2="605.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="609.0" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">-150</text>
+<line x1="90" y1="542.5" x2="1310" y2="542.5" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="546.5" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">0</text>
+<line x1="90" y1="480.0" x2="1310" y2="480.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="484.0" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">150</text>
+<rect x="79.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-10-01 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="119.84408602150536" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-10-08 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="160.51075268817203" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-10-15 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="201.17741935483872" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-10-22 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="241.84408602150538" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-10-29 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="282.51075268817203" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-11-05 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="323.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-11-12 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="363.8440860215054" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-11-19 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="404.51075268817203" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-11-26 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="445.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-12-03 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="485.84408602150535" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-12-10 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="526.5107526881719" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-12-17 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="567.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-12-24 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="607.8440860215053" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2025-12-31 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="648.510752688172" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-01-07 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="689.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-01-14 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="729.8440860215053" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-01-21 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="770.510752688172" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-01-28 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="811.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-02-04 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="851.8440860215053" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-02-11 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="892.5107526881719" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-02-18 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="933.1774193548387" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-02-25 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="973.8440860215053" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-03-04 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1014.5107526881721" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-03-11 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1055.1774193548388" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-03-18 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1095.8440860215055" y="480.0" width="21.64516129032258" height="62.5" fill="#ea580c" opacity="0.85"><title>2026-03-25 | BTC buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1136.510752688172" y="494.3712737198392" width="21.64516129032258" height="48.12872628016078" fill="#ea580c" opacity="0.85"><title>2026-04-01 | BTC buy 115.51 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1177.1774193548388" y="529.6698415007141" width="21.64516129032258" height="12.830158499285858" fill="#ea580c" opacity="0.85"><title>2026-04-08 | BTC buy 30.79 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1217.8440860215055" y="536.8244948481621" width="21.64516129032258" height="5.6755051518379105" fill="#ea580c" opacity="0.85"><title>2026-04-15 | BTC buy 13.62 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1258.510752688172" y="542.5" width="21.64516129032258" height="5.335974581781329" fill="#dc2626" opacity="0.85"><title>2026-04-22 | BTC sell 12.81 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1299.1774193548388" y="542.5" width="21.64516129032258" height="4.790615589886329" fill="#dc2626" opacity="0.85"><title>2026-04-29 | BTC sell 11.50 usd | reason=budgeted_static_target_rebalance</title></rect>
+<text x="24" y="542.5" transform="rotate(-90 24,542.5)" text-anchor="middle" font-family="monospace" font-size="14" fill="#0f172a">BTC weekly trade usd</text>
+<line x1="90" y1="770" x2="1310" y2="770" stroke="#334155" stroke-width="2"/>
+<line x1="90" y1="645" x2="90" y2="770" stroke="#334155" stroke-width="2"/>
+<line x1="90" y1="707.5" x2="1310" y2="707.5" stroke="#64748b" stroke-width="1.5" stroke-dasharray="6 4"/>
+<line x1="90" y1="770.0" x2="1310" y2="770.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="774.0" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">-162</text>
+<line x1="90" y1="707.5" x2="1310" y2="707.5" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="711.5" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">0</text>
+<line x1="90" y1="645.0" x2="1310" y2="645.0" stroke="#e2e8f0" stroke-width="1"/>
+<text x="78" y="649.0" text-anchor="end" font-family="monospace" font-size="11" fill="#475569">162</text>
+<rect x="79.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-10-01 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="119.84408602150536" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-10-08 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="160.51075268817203" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-10-15 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="201.17741935483872" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-10-22 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="241.84408602150538" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-10-29 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="282.51075268817203" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-11-05 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="323.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-11-12 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="363.8440860215054" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-11-19 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="404.51075268817203" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-11-26 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="445.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-12-03 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="485.84408602150535" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-12-10 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="526.5107526881719" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-12-17 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="567.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-12-24 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="607.8440860215053" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2025-12-31 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="648.510752688172" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-01-07 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="689.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-01-14 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="729.8440860215053" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-01-21 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="770.510752688172" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-01-28 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="811.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-02-04 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="851.8440860215053" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-02-11 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="892.5107526881719" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-02-18 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="933.1774193548387" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-02-25 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="973.8440860215053" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-03-04 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1014.5107526881721" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-03-11 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1055.1774193548388" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-03-18 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1095.8440860215055" y="649.5174158242208" width="21.64516129032258" height="57.98258417577915" fill="#2563eb" opacity="0.85"><title>2026-03-25 | ETH buy 150.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1136.510752688172" y="645.0" width="21.64516129032258" height="62.5" fill="#2563eb" opacity="0.85"><title>2026-04-01 | ETH buy 161.69 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1177.1774193548388" y="674.01497952852" width="21.64516129032258" height="33.48502047147997" fill="#2563eb" opacity="0.85"><title>2026-04-08 | ETH buy 86.63 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1217.8440860215055" y="706.7830776011695" width="21.64516129032258" height="1.5" fill="#2563eb" opacity="0.85"><title>2026-04-15 | ETH buy 1.85 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1258.510752688172" y="697.3716193971744" width="21.64516129032258" height="10.128380602825587" fill="#2563eb" opacity="0.85"><title>2026-04-22 | ETH buy 26.20 usd | reason=budgeted_static_target_rebalance</title></rect>
+<rect x="1299.1774193548388" y="689.7199264579486" width="21.64516129032258" height="17.780073542051355" fill="#2563eb" opacity="0.85"><title>2026-04-29 | ETH buy 46.00 usd | reason=budgeted_static_target_rebalance</title></rect>
+<text x="24" y="707.5" transform="rotate(-90 24,707.5)" text-anchor="middle" font-family="monospace" font-size="14" fill="#0f172a">ETH weekly trade usd</text>
+<rect x="1040" y="478" width="14" height="10" fill="#ea580c" opacity="0.85"/>
+<text x="1062" y="488" font-family="monospace" font-size="11" fill="#0f172a">BTC buy</text>
+<rect x="1190" y="478" width="14" height="10" fill="#dc2626" opacity="0.85"/>
+<text x="1212" y="488" font-family="monospace" font-size="11" fill="#0f172a">BTC sell</text>
+<rect x="1040" y="498" width="14" height="10" fill="#2563eb" opacity="0.85"/>
+<text x="1062" y="508" font-family="monospace" font-size="11" fill="#0f172a">ETH buy</text>
+<rect x="1190" y="498" width="14" height="10" fill="#7c3aed" opacity="0.85"/>
+<text x="1212" y="508" font-family="monospace" font-size="11" fill="#0f172a">ETH sell</text>
+</svg>

@@ -16,6 +16,9 @@ if str(ROOT) not in sys.path:
 from backtesting.multi_asset import MultiAssetSeries
 from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
 from backtesting.portfolio_strategies import (
+    BudgetedBTCDefensiveETHAggressive,
+    BudgetedDrawdownTiltRebalance,
+    BudgetedStatic50_50Rebalance,
     BTCDefensiveETHAggressive,
     DrawdownTiltRebalance,
     NarrowCashBandRebalance,
@@ -41,7 +44,15 @@ WEEKLY_INTERVAL = "7d"
 TOP_STRATEGY_LIMIT = 3
 ANNUALIZATION_DAYS = 365.2425
 MIN_QUARTERLY_WINDOW_DAYS = 90
+PRIMARY_STRATEGY_NAMES = [
+    "budgeted_static_50_50_rebalance",
+    "budgeted_drawdown_tilt_rebalance",
+    "budgeted_btc_defensive_eth_aggressive",
+]
 STRATEGY_DESCRIPTIONS = {
+    "budgeted_static_50_50_rebalance": "Balanced BTC/ETH target with explicit buy and sell budget fractions. This is the gentler budget-constrained benchmark.",
+    "budgeted_drawdown_tilt_rebalance": "Contrarian drawdown strategy that uses only a chosen fraction of the weekly buy/sell budget and tilts toward the more discounted asset.",
+    "budgeted_btc_defensive_eth_aggressive": "BTC-defensive, ETH-opportunistic regime strategy that chooses how much of the weekly cap to use instead of being clipped afterward.",
     "static_50_50_rebalance": "Keeps a simple balanced BTC/ETH risk bucket with a fixed DAI cash reserve. It is the plain benchmark.",
     "target_50_50_with_cash_band": "Uses broad cheap/neutral/expensive regime bands to raise or lower DAI. It is the more defensive cash-timing version.",
     "narrow_cash_band_rebalance": "Same cash-band idea as above, but with narrower DAI swings so it stays more invested for longer.",
@@ -53,6 +64,9 @@ LINE_WIDTH = 1400
 LINE_HEIGHT = 800
 LINE_PADDING = 90
 PALETTE = {
+    "budgeted_static_50_50_rebalance": "#0f766e",
+    "budgeted_drawdown_tilt_rebalance": "#9333ea",
+    "budgeted_btc_defensive_eth_aggressive": "#92400e",
     "static_50_50_rebalance": "#0f766e",
     "target_50_50_with_cash_band": "#dc2626",
     "narrow_cash_band_rebalance": "#2563eb",
@@ -108,6 +122,8 @@ def parse_args():
     parser.add_argument("--withdrawal-dai", default="0")
     parser.add_argument("--withdrawal-interval-days", type=int)
     parser.add_argument("--max-buy-trade-dai")
+    parser.add_argument("--max-buy-step-dai")
+    parser.add_argument("--max-sell-step-dai")
     parser.add_argument("--quarterly-starts", action="store_true")
     parser.add_argument("--quarterly-starts-from")
     return parser.parse_args()
@@ -150,6 +166,9 @@ def build_quarterly_since_dates(bundle, start=None, min_window_days=MIN_QUARTERL
 
 def build_portfolio_strategies():
     return [
+        BudgetedStatic50_50Rebalance(),
+        BudgetedDrawdownTiltRebalance(),
+        BudgetedBTCDefensiveETHAggressive(),
         Static50_50Rebalance(),
         Target50_50WithCashBand(),
         NarrowCashBandRebalance(),
@@ -168,6 +187,8 @@ def run_portfolio_backtests(
     withdrawal_dai,
     withdrawal_interval_days,
     max_buy_trade_dai=None,
+    max_buy_step_dai=None,
+    max_sell_step_dai=None,
 ):
     results = []
     for since in since_dates:
@@ -177,6 +198,8 @@ def run_portfolio_backtests(
                 withdrawal_amount_dai=withdrawal_dai,
                 withdrawal_interval_days=withdrawal_interval_days,
                 max_buy_trade_dai=max_buy_trade_dai,
+                max_buy_step_dai=max_buy_step_dai,
+                max_sell_step_dai=max_sell_step_dai,
             )
             for strategy in build_portfolio_strategies():
                 results.append(
@@ -220,6 +243,8 @@ def build_manifest(args, since_dates, interval_days_options):
         "withdrawal_dai": str(args.withdrawal_dai),
         "withdrawal_interval_days": args.withdrawal_interval_days,
         "max_buy_trade_dai": args.max_buy_trade_dai,
+        "max_buy_step_dai": args.max_buy_step_dai,
+        "max_sell_step_dai": args.max_sell_step_dai,
         "quarterly_starts": args.quarterly_starts,
         "data_root": str(args.data_root),
         "data_files": {
@@ -377,6 +402,10 @@ def _weekly_results(results):
     return [result for result in results if result.contribution_interval == WEEKLY_INTERVAL]
 
 
+def _primary_results(results):
+    return [result for result in results if result.strategy_name in PRIMARY_STRATEGY_NAMES]
+
+
 def _mean(values):
     return sum(values) / len(values) if values else 0
 
@@ -413,13 +442,17 @@ def rank_top_weekly_strategies(results, limit=TOP_STRATEGY_LIMIT):
     return ranking[:limit]
 
 
-def format_top_weekly_strategy_summary(results, limit=TOP_STRATEGY_LIMIT):
+def format_top_weekly_strategy_summary(
+    results,
+    limit=TOP_STRATEGY_LIMIT,
+    title="# Top Weekly Portfolio Strategies",
+):
     ranking = rank_top_weekly_strategies(results, limit=limit)
     if not ranking:
         return "No weekly portfolio results available."
 
     lines = [
-        "# Top Weekly Portfolio Strategies",
+        title,
         "",
         "Rank | Strategy | Mean Return % | Min Return % | Max Return %",
         "--- | --- | ---: | ---: | ---:",
@@ -451,7 +484,13 @@ def format_top_weekly_strategy_summary(results, limit=TOP_STRATEGY_LIMIT):
 
 def write_top_weekly_strategy_summary(results, output_path, limit=TOP_STRATEGY_LIMIT):
     output_path = Path(output_path)
-    output_path.write_text(format_top_weekly_strategy_summary(results, limit=limit))
+    output_path.write_text(
+        format_top_weekly_strategy_summary(
+            results,
+            limit=limit,
+            title="# Top Weekly Budgeted Portfolio Strategies",
+        )
+    )
     return output_path
 
 
@@ -463,7 +502,7 @@ def format_strategy_catalog(results):
     lines = [
         "# Portfolio Strategy Catalog",
         "",
-        "This report groups every tested start date for each portfolio strategy.",
+        "This report groups every tested start date for each primary budgeted portfolio strategy.",
         "",
     ]
     for strategy_name, strategy_results in sorted(grouped.items()):
@@ -507,7 +546,7 @@ def format_negative_window_summary(results):
     lines = [
         "# Negative Return Windows",
         "",
-        "This report lists any tested start dates where the total return fell below zero.",
+        "This report lists any tested start dates where the total return fell below zero for the primary budgeted portfolio strategies.",
         "",
     ]
     any_negative = False
@@ -752,16 +791,19 @@ def main():
         withdrawal_dai=args.withdrawal_dai,
         withdrawal_interval_days=args.withdrawal_interval_days,
         max_buy_trade_dai=args.max_buy_trade_dai,
+        max_buy_step_dai=args.max_buy_step_dai,
+        max_sell_step_dai=args.max_sell_step_dai,
     )
     manifest = build_manifest(args, since_dates, interval_days_options)
     saved_paths = save_results(args.output_dir, results, manifest)
     run_dir = Path(saved_paths["run_dir"])
     latest_dir = Path(saved_paths["latest_dir"])
-    plot_paths = write_equity_curve_plots(results, run_dir)
-    weekly_plot_paths = write_top_weekly_strategy_plots(results, run_dir)
-    weekly_summary_path = write_top_weekly_strategy_summary(results, run_dir / "weekly_top3_summary.md")
-    strategy_catalog_path = write_strategy_catalog(results, run_dir / "strategy_catalog.md")
-    negative_windows_path = write_negative_window_summary(results, run_dir / "negative_windows.md")
+    primary_results = _primary_results(results)
+    plot_paths = write_equity_curve_plots(primary_results, run_dir)
+    weekly_plot_paths = write_top_weekly_strategy_plots(primary_results, run_dir)
+    weekly_summary_path = write_top_weekly_strategy_summary(primary_results, run_dir / "weekly_top3_summary.md")
+    strategy_catalog_path = write_strategy_catalog(primary_results, run_dir / "strategy_catalog.md")
+    negative_windows_path = write_negative_window_summary(primary_results, run_dir / "negative_windows.md")
     copy_outputs_to_latest(plot_paths, latest_dir)
     copy_outputs_to_latest(
         weekly_plot_paths + [weekly_summary_path, strategy_catalog_path, negative_windows_path],
@@ -770,7 +812,12 @@ def main():
 
     print(format_results_table(results))
     print()
-    print(format_top_weekly_strategy_summary(results))
+    print(
+        format_top_weekly_strategy_summary(
+            primary_results,
+            title="# Top Weekly Budgeted Portfolio Strategies",
+        )
+    )
     print()
     print(f"Run directory: {saved_paths['run_dir']}")
     print(f"Latest directory: {saved_paths['latest_dir']}")
