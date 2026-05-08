@@ -2,13 +2,15 @@
 
 This directory is the current working view of the portfolio-management backtests.
 
-The current baseline behind these files is:
+The current mirrored snapshot behind these files is:
 
-- initial portfolio: `0 BTC / 0 ETH / 10000 DAI`
+- initial portfolio: `0 BTC / 0 ETH / 15000 DAI`
 - cadence: `weekly` (`7d`)
 - start dates: quarterly from `2020-01-01`
 - short final start `2026-04-01` excluded
 - market data updated through `2026-05-05`
+- buy cap: `250 DAI`
+- sell cap: none
 
 The primary discussion in this directory now focuses on the **budgeted** strategies only:
 
@@ -23,8 +25,15 @@ If you want immutable historical snapshots, use the timestamped run directories 
 ## What To Read First
 
 - [weekly_top3_summary.md](weekly_top3_summary.md)
-  - current ranking of the primary budgeted strategies
-  - best place to start if you want the current conclusions
+  - current ranking for the mirrored snapshot
+  - best place to start if you want the current snapshot conclusions
+
+- [scenario_comparison.md](scenario_comparison.md)
+  - preserved comparison of the recent:
+    - `10000 DAI / 250 buy cap`
+    - `15000 DAI / 500 buy cap`
+    - `15000 DAI / 250 buy cap`
+  - includes mean return, worst return, and minimum DAI reached
 
 - [strategy_catalog.md](strategy_catalog.md)
   - strategy-by-strategy table

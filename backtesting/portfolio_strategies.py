@@ -4,6 +4,7 @@ from decimal import Decimal
 
 ONE = Decimal("1")
 HALF = Decimal("0.5")
+ZERO = Decimal("0")
 
 
 @dataclass(frozen=True)
@@ -11,6 +12,17 @@ class TargetAllocationDecision:
     target_weights: dict
     rebalance_fraction: Decimal
     reason: str
+
+
+@dataclass(frozen=True)
+class BudgetedTargetAllocationDecision:
+    target_weights: dict
+    rebalance_fraction: Decimal
+    reason: str
+    buy_budget_fraction: Decimal
+    sell_budget_fraction: Decimal
+    buy_weights: dict
+    sell_weights: dict
 
 
 class Static50_50Rebalance:
@@ -349,6 +361,255 @@ class BTCDefensiveETHAggressive:
             f"weak_cash_weight={self.weak_cash_weight},"
             f"neutral_cash_weight={self.neutral_cash_weight},"
             f"strong_cash_weight={self.strong_cash_weight})"
+        )
+
+
+class BudgetedStatic50_50Rebalance:
+    name = "budgeted_static_50_50_rebalance"
+
+    def __init__(
+        self,
+        cash_weight="0.20",
+        rebalance_fraction="0.50",
+        buy_budget_fraction="0.60",
+        sell_budget_fraction="0.35",
+    ):
+        self.cash_weight = Decimal(str(cash_weight))
+        self.rebalance_fraction = Decimal(str(rebalance_fraction))
+        self.buy_budget_fraction = Decimal(str(buy_budget_fraction))
+        self.sell_budget_fraction = Decimal(str(sell_budget_fraction))
+
+    def decide(self, timestamp, bundle, state):
+        risk_weight = ONE - self.cash_weight
+        return BudgetedTargetAllocationDecision(
+            target_weights={
+                "BTC-USD": risk_weight * HALF,
+                "ETH-USD": risk_weight * HALF,
+                "DAI": self.cash_weight,
+            },
+            rebalance_fraction=self.rebalance_fraction,
+            reason="budgeted_static_target_rebalance",
+            buy_budget_fraction=self.buy_budget_fraction,
+            sell_budget_fraction=self.sell_budget_fraction,
+            buy_weights={"BTC-USD": HALF, "ETH-USD": HALF},
+            sell_weights={"BTC-USD": HALF, "ETH-USD": HALF},
+        )
+
+    def label(self):
+        return (
+            f"{self.name}(cash_weight={self.cash_weight},"
+            f"rebalance_fraction={self.rebalance_fraction},"
+            f"buy_budget_fraction={self.buy_budget_fraction},"
+            f"sell_budget_fraction={self.sell_budget_fraction})"
+        )
+
+
+class BudgetedDrawdownTiltRebalance:
+    name = "budgeted_drawdown_tilt_rebalance"
+
+    def __init__(
+        self,
+        drawdown_window_days=365,
+        deep_drawdown="0.50",
+        medium_drawdown="0.25",
+        deep_bear_cash_weight="0.05",
+        bear_cash_weight="0.15",
+        neutral_cash_weight="0.25",
+        bull_cash_weight="0.40",
+        rebalance_fraction="0.45",
+        max_asset_tilt="0.20",
+        deep_buy_budget_fraction="1.00",
+        medium_buy_budget_fraction="0.80",
+        neutral_buy_budget_fraction="0.45",
+        bull_sell_budget_fraction="0.30",
+        neutral_sell_budget_fraction="0.15",
+    ):
+        self.drawdown_window_days = drawdown_window_days
+        self.deep_drawdown = Decimal(str(deep_drawdown))
+        self.medium_drawdown = Decimal(str(medium_drawdown))
+        self.deep_bear_cash_weight = Decimal(str(deep_bear_cash_weight))
+        self.bear_cash_weight = Decimal(str(bear_cash_weight))
+        self.neutral_cash_weight = Decimal(str(neutral_cash_weight))
+        self.bull_cash_weight = Decimal(str(bull_cash_weight))
+        self.rebalance_fraction = Decimal(str(rebalance_fraction))
+        self.max_asset_tilt = Decimal(str(max_asset_tilt))
+        self.deep_buy_budget_fraction = Decimal(str(deep_buy_budget_fraction))
+        self.medium_buy_budget_fraction = Decimal(str(medium_buy_budget_fraction))
+        self.neutral_buy_budget_fraction = Decimal(str(neutral_buy_budget_fraction))
+        self.bull_sell_budget_fraction = Decimal(str(bull_sell_budget_fraction))
+        self.neutral_sell_budget_fraction = Decimal(str(neutral_sell_budget_fraction))
+
+    def decide(self, timestamp, bundle, state):
+        btc = _asset_signal(bundle, "BTC-USD", timestamp, 200, self.drawdown_window_days)
+        eth = _asset_signal(bundle, "ETH-USD", timestamp, 200, self.drawdown_window_days)
+
+        if btc is None or eth is None:
+            return BudgetedStatic50_50Rebalance().decide(timestamp, bundle, state)
+
+        deepest_drawdown = max(btc["drawdown"], eth["drawdown"])
+        if deepest_drawdown >= self.deep_drawdown:
+            cash_weight = self.deep_bear_cash_weight
+            reason = "deep_drawdown"
+            buy_budget_fraction = self.deep_buy_budget_fraction
+            sell_budget_fraction = ZERO
+        elif deepest_drawdown >= self.medium_drawdown:
+            cash_weight = self.bear_cash_weight
+            reason = "medium_drawdown"
+            buy_budget_fraction = self.medium_buy_budget_fraction
+            sell_budget_fraction = ZERO
+        elif btc["expensive"] and eth["expensive"]:
+            cash_weight = self.bull_cash_weight
+            reason = "both_assets_expensive"
+            buy_budget_fraction = ZERO
+            sell_budget_fraction = self.bull_sell_budget_fraction
+        else:
+            cash_weight = self.neutral_cash_weight
+            reason = "neutral_drawdown"
+            buy_budget_fraction = self.neutral_buy_budget_fraction
+            sell_budget_fraction = self.neutral_sell_budget_fraction
+
+        tilt = _drawdown_tilt(btc["drawdown"], eth["drawdown"], self.max_asset_tilt)
+        btc_risk_share = HALF
+        if btc["drawdown"] > eth["drawdown"]:
+            btc_risk_share += tilt
+            reason += "_btc_tilt"
+        elif eth["drawdown"] > btc["drawdown"]:
+            btc_risk_share -= tilt
+            reason += "_eth_tilt"
+
+        base = _manual_weights(
+            cash_weight=cash_weight,
+            btc_risk_share=btc_risk_share,
+            rebalance_fraction=self.rebalance_fraction,
+            reason=reason,
+        )
+        risk_weight = ONE - cash_weight
+        buy_weights = {
+            "BTC-USD": base.target_weights["BTC-USD"] / risk_weight if risk_weight > 0 else HALF,
+            "ETH-USD": base.target_weights["ETH-USD"] / risk_weight if risk_weight > 0 else HALF,
+        }
+        return BudgetedTargetAllocationDecision(
+            target_weights=base.target_weights,
+            rebalance_fraction=base.rebalance_fraction,
+            reason=base.reason,
+            buy_budget_fraction=buy_budget_fraction,
+            sell_budget_fraction=sell_budget_fraction,
+            buy_weights=buy_weights,
+            sell_weights={"BTC-USD": HALF, "ETH-USD": HALF},
+        )
+
+    def label(self):
+        return (
+            f"{self.name}(drawdown_window_days={self.drawdown_window_days},"
+            f"deep_drawdown={self.deep_drawdown},"
+            f"medium_drawdown={self.medium_drawdown},"
+            f"deep_buy_budget_fraction={self.deep_buy_budget_fraction},"
+            f"bull_sell_budget_fraction={self.bull_sell_budget_fraction})"
+        )
+
+
+class BudgetedBTCDefensiveETHAggressive:
+    name = "budgeted_btc_defensive_eth_aggressive"
+
+    def __init__(
+        self,
+        ma_window_days=200,
+        return_window_days=84,
+        weak_cash_weight="0.25",
+        neutral_cash_weight="0.15",
+        strong_cash_weight="0.10",
+        eth_overweight="0.15",
+        btc_overweight="0.10",
+        rebalance_fraction="0.40",
+        weak_buy_budget_fraction="0.90",
+        strong_buy_budget_fraction="0.65",
+        neutral_buy_budget_fraction="0.45",
+        sell_budget_fraction="0.20",
+    ):
+        self.ma_window_days = ma_window_days
+        self.return_window_days = return_window_days
+        self.weak_cash_weight = Decimal(str(weak_cash_weight))
+        self.neutral_cash_weight = Decimal(str(neutral_cash_weight))
+        self.strong_cash_weight = Decimal(str(strong_cash_weight))
+        self.eth_overweight = Decimal(str(eth_overweight))
+        self.btc_overweight = Decimal(str(btc_overweight))
+        self.rebalance_fraction = Decimal(str(rebalance_fraction))
+        self.weak_buy_budget_fraction = Decimal(str(weak_buy_budget_fraction))
+        self.strong_buy_budget_fraction = Decimal(str(strong_buy_budget_fraction))
+        self.neutral_buy_budget_fraction = Decimal(str(neutral_buy_budget_fraction))
+        self.sell_budget_fraction = Decimal(str(sell_budget_fraction))
+
+    def decide(self, timestamp, bundle, state):
+        btc = _asset_signal(bundle, "BTC-USD", timestamp, self.ma_window_days, 365)
+        eth = _asset_signal(bundle, "ETH-USD", timestamp, self.ma_window_days, 365)
+
+        if btc is None or eth is None:
+            return BudgetedStatic50_50Rebalance().decide(timestamp, bundle, state)
+
+        btc_return = bundle.trailing_return("BTC-USD", timestamp, self.return_window_days)
+        eth_return = bundle.trailing_return("ETH-USD", timestamp, self.return_window_days)
+        if btc_return is None or eth_return is None:
+            return BudgetedStatic50_50Rebalance().decide(timestamp, bundle, state)
+
+        btc_strong = not btc["cheap"]
+        eth_strong = not eth["cheap"] and eth_return > btc_return
+
+        if btc["cheap"] and eth["cheap"]:
+            cash_weight = self.weak_cash_weight
+            reason = "both_weak_btc_defensive"
+            buy_budget_fraction = self.weak_buy_budget_fraction
+            sell_budget_fraction = ZERO
+            btc_risk_share = Decimal("0.60")
+        elif eth_strong and not btc["expensive"]:
+            cash_weight = self.strong_cash_weight
+            reason = "eth_strong_risk_on"
+            buy_budget_fraction = self.strong_buy_budget_fraction
+            sell_budget_fraction = ZERO
+            btc_risk_share = HALF - self.eth_overweight
+        elif btc_strong and not eth_strong:
+            cash_weight = self.neutral_cash_weight
+            reason = "btc_defensive_regime"
+            buy_budget_fraction = self.neutral_buy_budget_fraction
+            sell_budget_fraction = self.sell_budget_fraction if eth["expensive"] else ZERO
+            btc_risk_share = HALF + self.btc_overweight
+        else:
+            cash_weight = self.neutral_cash_weight
+            reason = "balanced_regime"
+            buy_budget_fraction = self.neutral_buy_budget_fraction
+            sell_budget_fraction = self.sell_budget_fraction if btc["expensive"] and eth["expensive"] else ZERO
+            btc_risk_share = HALF
+
+        base = _manual_weights(
+            cash_weight=cash_weight,
+            btc_risk_share=btc_risk_share,
+            rebalance_fraction=self.rebalance_fraction,
+            reason=reason,
+        )
+        risk_weight = ONE - cash_weight
+        buy_weights = {
+            "BTC-USD": base.target_weights["BTC-USD"] / risk_weight if risk_weight > 0 else HALF,
+            "ETH-USD": base.target_weights["ETH-USD"] / risk_weight if risk_weight > 0 else HALF,
+        }
+        sell_weights = {"BTC-USD": HALF, "ETH-USD": HALF}
+        if reason == "btc_defensive_regime":
+            sell_weights = {"BTC-USD": Decimal("0.35"), "ETH-USD": Decimal("0.65")}
+        return BudgetedTargetAllocationDecision(
+            target_weights=base.target_weights,
+            rebalance_fraction=base.rebalance_fraction,
+            reason=base.reason,
+            buy_budget_fraction=buy_budget_fraction,
+            sell_budget_fraction=sell_budget_fraction,
+            buy_weights=buy_weights,
+            sell_weights=sell_weights,
+        )
+
+    def label(self):
+        return (
+            f"{self.name}(ma_window_days={self.ma_window_days},"
+            f"return_window_days={self.return_window_days},"
+            f"weak_buy_budget_fraction={self.weak_buy_budget_fraction},"
+            f"strong_buy_budget_fraction={self.strong_buy_budget_fraction},"
+            f"sell_budget_fraction={self.sell_budget_fraction})"
         )
 
 

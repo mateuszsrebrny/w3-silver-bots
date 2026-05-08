@@ -5,6 +5,8 @@ from backtesting.engine import BacktestEngine
 from backtesting.multi_asset import MultiAssetSeries
 from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
 from backtesting.portfolio_strategies import (
+    BudgetedBTCDefensiveETHAggressive,
+    BudgetedStatic50_50Rebalance,
     BTCDefensiveETHAggressive,
     DrawdownTiltRebalance,
     NarrowCashBandRebalance,
@@ -378,6 +380,62 @@ def test_portfolio_management_engine_can_cap_buy_trade_size():
 
     assert buy_trades
     assert max(trade.notional_usd for trade in buy_trades) == Decimal("50")
+
+
+def test_budgeted_portfolio_engine_uses_step_buy_cap():
+    btc = make_series([100 + day for day in range(40)], product_id="BTC-USD")
+    eth = make_series([100 + day for day in range(40)], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    engine = PortfolioManagementBacktestEngine(
+        interval_days=7,
+        max_buy_step_dai="100",
+    )
+    result = engine.run(
+        bundle,
+        BudgetedStatic50_50Rebalance(
+            cash_weight="0.00",
+            rebalance_fraction="1.00",
+            buy_budget_fraction="1.00",
+            sell_budget_fraction="0.00",
+        ),
+        datetime(2024, 1, 1, tzinfo=UTC),
+        initial_btc="0",
+        initial_eth="0",
+        initial_dai="1000",
+    )
+
+    first_step_trades = [trade for trade in result.trades if trade.timestamp == result.start_timestamp]
+    assert sum(trade.notional_usd for trade in first_step_trades if trade.side == "buy") == Decimal("100")
+
+
+def test_budgeted_portfolio_engine_uses_step_sell_cap():
+    btc = make_series([100] * 20 + [300] * 20, product_id="BTC-USD")
+    eth = make_series([100] * 20 + [300] * 20, product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    engine = PortfolioManagementBacktestEngine(
+        interval_days=7,
+        max_sell_step_dai="100",
+    )
+    result = engine.run(
+        bundle,
+        BudgetedBTCDefensiveETHAggressive(
+            weak_cash_weight="0.80",
+            neutral_cash_weight="0.80",
+            strong_cash_weight="0.80",
+            weak_buy_budget_fraction="0.00",
+            strong_buy_budget_fraction="0.00",
+            neutral_buy_budget_fraction="0.00",
+            sell_budget_fraction="1.00",
+        ),
+        datetime(2024, 1, 1, tzinfo=UTC),
+        initial_btc="5",
+        initial_eth="5",
+        initial_dai="0",
+    )
+
+    sell_trades = [trade for trade in result.trades if trade.side == "sell"]
+    assert sell_trades
+    assert max(trade.notional_usd for trade in sell_trades) <= Decimal("100")
 
 
 def test_portfolio_reporting_uses_portfolio_specific_columns():
