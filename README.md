@@ -50,6 +50,10 @@ It started as an older Web3 tracking script and has been refactored into a small
   - evaluates one assumed `DAI/BTC/ETH` snapshot on one date
   - prints what each portfolio strategy would buy, sell, or hold
 
+- [scripts/sunday_recommendation.py](scripts/sunday_recommendation.py)
+  - prints one concise Sunday recommendation for the chosen live strategy
+  - intended as the operator-facing wrapper around the dry-run logic
+
 - [scripts/plot_backtest_scatter.py](scripts/plot_backtest_scatter.py)
   - generates scatter plots from saved DCA backtest CSV output
 
@@ -179,6 +183,12 @@ For a one-date decision dry-run with assumed holdings:
 ```
 
 This is useful when you want to ask "what would each strategy do on this date?" without rerunning the whole backtest matrix.
+
+For a concise operator-facing recommendation:
+
+```bash
+.venv/bin/python scripts/sunday_recommendation.py --date 2026-05-10 --dai 10000 --btc 0.07 --eth 3
+```
 
 ## Tests
 

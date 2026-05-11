@@ -30,6 +30,9 @@ def parse_args():
     parser.add_argument("--max-buy-trade-dai", help="Optional per-buy cap in DAI.")
     parser.add_argument("--max-buy-step-dai", help="Optional total buy budget cap per decision step in DAI.")
     parser.add_argument("--max-sell-step-dai", help="Optional total sell budget cap per decision step in DAI.")
+    parser.add_argument("--reserve-dai", help="Optional soft reserve threshold in DAI for reserve-aware buying.")
+    parser.add_argument("--reserve-buy-scale", default="0.50", help="Buy-budget scale used inside the reserve zone.")
+    parser.add_argument("--reserve-deep-buy-scale", default="0.25", help="Buy-budget scale used deep inside the reserve zone.")
     parser.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
     return parser.parse_args()
 
@@ -69,7 +72,19 @@ def _signed_trade_notional(snapshot, symbol):
     return total
 
 
-def dry_run(bundle, timestamp, dai_units, btc_units, eth_units, max_buy_trade_dai=None, max_buy_step_dai=None, max_sell_step_dai=None):
+def dry_run(
+    bundle,
+    timestamp,
+    dai_units,
+    btc_units,
+    eth_units,
+    max_buy_trade_dai=None,
+    max_buy_step_dai=None,
+    max_sell_step_dai=None,
+    reserve_dai=None,
+    reserve_buy_scale="0.50",
+    reserve_deep_buy_scale="0.25",
+):
     results = []
     for strategy in build_portfolio_strategies():
         state = PortfolioManagementState(
@@ -84,18 +99,36 @@ def dry_run(bundle, timestamp, dai_units, btc_units, eth_units, max_buy_trade_da
             max_buy_trade_dai=max_buy_trade_dai,
             max_buy_step_dai=max_buy_step_dai,
             max_sell_step_dai=max_sell_step_dai,
+            reserve_dai=reserve_dai,
+            reserve_buy_scale=reserve_buy_scale,
+            reserve_deep_buy_scale=reserve_deep_buy_scale,
         )
         snapshot = engine.evaluate_step(bundle, strategy, timestamp, state)
         results.append((strategy, snapshot))
     return results
 
 
-def format_report(bundle, requested_timestamp, effective_timestamp, dai_units, btc_units, eth_units, results, max_buy_trade_dai=None):
+def format_report(
+    bundle,
+    requested_timestamp,
+    effective_timestamp,
+    dai_units,
+    btc_units,
+    eth_units,
+    results,
+    max_buy_trade_dai=None,
+    max_buy_step_dai=None,
+    max_sell_step_dai=None,
+    reserve_dai=None,
+):
     lines = [
         f"Requested date: {requested_timestamp.date().isoformat()}",
         f"Effective date: {effective_timestamp.date().isoformat()}",
         f"Assumed holdings: DAI={dai_units} BTC={btc_units} ETH={eth_units}",
         f"Max buy per trade: {max_buy_trade_dai if max_buy_trade_dai is not None else 'uncapped'}",
+        f"Max buy per step: {max_buy_step_dai if max_buy_step_dai is not None else 'uncapped'}",
+        f"Max sell per step: {max_sell_step_dai if max_sell_step_dai is not None else 'uncapped'}",
+        f"Reserve DAI threshold: {reserve_dai if reserve_dai is not None else 'disabled'}",
         f"Prices: BTC={bundle.close('BTC-USD', effective_timestamp):.2f} USD, ETH={bundle.close('ETH-USD', effective_timestamp):.2f} USD",
         "",
         "strategy | reason | action | btc_trade_usd | eth_trade_usd | current_weights | target_weights | ending_holdings",
@@ -148,6 +181,9 @@ def main():
         max_buy_trade_dai=args.max_buy_trade_dai,
         max_buy_step_dai=args.max_buy_step_dai,
         max_sell_step_dai=args.max_sell_step_dai,
+        reserve_dai=args.reserve_dai,
+        reserve_buy_scale=args.reserve_buy_scale,
+        reserve_deep_buy_scale=args.reserve_deep_buy_scale,
     )
     print(
         format_report(
@@ -159,6 +195,9 @@ def main():
             eth_units=args.eth,
             results=results,
             max_buy_trade_dai=args.max_buy_trade_dai,
+            max_buy_step_dai=args.max_buy_step_dai,
+            max_sell_step_dai=args.max_sell_step_dai,
+            reserve_dai=args.reserve_dai,
         )
     )
 

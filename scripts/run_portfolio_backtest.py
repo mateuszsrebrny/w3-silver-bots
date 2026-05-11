@@ -124,6 +124,9 @@ def parse_args():
     parser.add_argument("--max-buy-trade-dai")
     parser.add_argument("--max-buy-step-dai")
     parser.add_argument("--max-sell-step-dai")
+    parser.add_argument("--reserve-dai")
+    parser.add_argument("--reserve-buy-scale", default="0.50")
+    parser.add_argument("--reserve-deep-buy-scale", default="0.25")
     parser.add_argument("--quarterly-starts", action="store_true")
     parser.add_argument("--quarterly-starts-from")
     return parser.parse_args()
@@ -189,6 +192,9 @@ def run_portfolio_backtests(
     max_buy_trade_dai=None,
     max_buy_step_dai=None,
     max_sell_step_dai=None,
+    reserve_dai=None,
+    reserve_buy_scale="0.50",
+    reserve_deep_buy_scale="0.25",
 ):
     results = []
     for since in since_dates:
@@ -200,6 +206,9 @@ def run_portfolio_backtests(
                 max_buy_trade_dai=max_buy_trade_dai,
                 max_buy_step_dai=max_buy_step_dai,
                 max_sell_step_dai=max_sell_step_dai,
+                reserve_dai=reserve_dai,
+                reserve_buy_scale=reserve_buy_scale,
+                reserve_deep_buy_scale=reserve_deep_buy_scale,
             )
             for strategy in build_portfolio_strategies():
                 results.append(
@@ -245,6 +254,9 @@ def build_manifest(args, since_dates, interval_days_options):
         "max_buy_trade_dai": args.max_buy_trade_dai,
         "max_buy_step_dai": args.max_buy_step_dai,
         "max_sell_step_dai": args.max_sell_step_dai,
+        "reserve_dai": args.reserve_dai,
+        "reserve_buy_scale": args.reserve_buy_scale,
+        "reserve_deep_buy_scale": args.reserve_deep_buy_scale,
         "quarterly_starts": args.quarterly_starts,
         "data_root": str(args.data_root),
         "data_files": {
@@ -793,6 +805,9 @@ def main():
         max_buy_trade_dai=args.max_buy_trade_dai,
         max_buy_step_dai=args.max_buy_step_dai,
         max_sell_step_dai=args.max_sell_step_dai,
+        reserve_dai=args.reserve_dai,
+        reserve_buy_scale=args.reserve_buy_scale,
+        reserve_deep_buy_scale=args.reserve_deep_buy_scale,
     )
     manifest = build_manifest(args, since_dates, interval_days_options)
     saved_paths = save_results(args.output_dir, results, manifest)

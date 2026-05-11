@@ -185,6 +185,9 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
         "max_buy_trade_dai": "500",
         "max_buy_step_dai": None,
         "max_sell_step_dai": None,
+        "reserve_dai": None,
+        "reserve_buy_scale": "0.50",
+        "reserve_deep_buy_scale": "0.25",
     }
     output = capsys.readouterr().out
     assert "portfolio-table" in output

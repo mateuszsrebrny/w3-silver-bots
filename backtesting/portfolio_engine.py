@@ -76,6 +76,9 @@ class PortfolioManagementBacktestEngine:
         max_buy_trade_dai=None,
         max_buy_step_dai=None,
         max_sell_step_dai=None,
+        reserve_dai=None,
+        reserve_buy_scale="0.50",
+        reserve_deep_buy_scale="0.25",
     ):
         self.interval_days = interval_days
         self.withdrawal_amount_dai = Decimal(str(withdrawal_amount_dai))
@@ -96,6 +99,13 @@ class PortfolioManagementBacktestEngine:
             if max_sell_step_dai is not None
             else None
         )
+        self.reserve_dai = (
+            Decimal(str(reserve_dai))
+            if reserve_dai is not None
+            else None
+        )
+        self.reserve_buy_scale = Decimal(str(reserve_buy_scale))
+        self.reserve_deep_buy_scale = Decimal(str(reserve_deep_buy_scale))
 
     def run(self, bundle, strategy, since, initial_btc, initial_eth, initial_dai):
         state = PortfolioManagementState(
@@ -310,10 +320,15 @@ class PortfolioManagementBacktestEngine:
 
         if buy_candidates:
             desired_total = sum((item[1] for item in buy_candidates), ZERO)
+            effective_buy_fraction = self._reserve_adjusted_buy_fraction(
+                state,
+                Decimal(str(decision.buy_budget_fraction)),
+                decision.reason,
+            )
             if self.max_buy_step_dai is not None:
-                budget_total = min(state.dai_units, self.max_buy_step_dai * Decimal(str(decision.buy_budget_fraction)))
+                budget_total = min(state.dai_units, self.max_buy_step_dai * effective_buy_fraction)
             else:
-                budget_total = min(state.dai_units, desired_total * Decimal(str(decision.buy_budget_fraction)))
+                budget_total = min(state.dai_units, desired_total * effective_buy_fraction)
             allocations = _allocate_budget(
                 buy_candidates,
                 budget_total,
@@ -394,6 +409,30 @@ class PortfolioManagementBacktestEngine:
             total_value=total_value,
             step_trades=step_trades,
         )
+
+    def _reserve_adjusted_buy_fraction(self, state, base_buy_fraction, reason):
+        if self.reserve_dai is None or self.reserve_dai <= 0:
+            return base_buy_fraction
+        if state.dai_units > self.reserve_dai:
+            return base_buy_fraction
+
+        deep_reason = "deep_drawdown" in reason
+        medium_reason = "medium_drawdown" in reason
+        cheap_reason = "both_assets_cheap" in reason
+        weak_reason = "both_weak" in reason
+        strong_reason = deep_reason or medium_reason or cheap_reason or weak_reason
+        half_reserve = self.reserve_dai * Decimal("0.5")
+
+        if state.dai_units <= half_reserve:
+            if not deep_reason:
+                return ZERO
+            return base_buy_fraction * self.reserve_deep_buy_scale
+
+        if deep_reason or medium_reason or cheap_reason:
+            return base_buy_fraction * self.reserve_buy_scale
+        if weak_reason:
+            return ZERO
+        return ZERO
 
 
 def _position_values(bundle, positions, timestamp):

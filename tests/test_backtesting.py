@@ -438,6 +438,114 @@ def test_budgeted_portfolio_engine_uses_step_sell_cap():
     assert max(trade.notional_usd for trade in sell_trades) <= Decimal("100")
 
 
+def test_budgeted_portfolio_engine_scales_buys_inside_reserve_zone():
+    btc = make_series([100 + day for day in range(40)], product_id="BTC-USD")
+    eth = make_series([100 + day for day in range(40)], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    engine = PortfolioManagementBacktestEngine(
+        interval_days=7,
+        max_buy_step_dai="100",
+        reserve_dai="250",
+        reserve_buy_scale="0.50",
+        reserve_deep_buy_scale="0.25",
+    )
+    result = engine.run(
+        bundle,
+        BudgetedStatic50_50Rebalance(
+            cash_weight="0.00",
+            rebalance_fraction="1.00",
+            buy_budget_fraction="1.00",
+            sell_budget_fraction="0.00",
+        ),
+        datetime(2024, 1, 1, tzinfo=UTC),
+        initial_btc="0",
+        initial_eth="0",
+        initial_dai="200",
+    )
+
+    first_step_trades = [trade for trade in result.trades if trade.timestamp == result.start_timestamp]
+    assert sum(trade.notional_usd for trade in first_step_trades if trade.side == "buy") == Decimal("0")
+
+
+def test_budgeted_portfolio_engine_blocks_weak_buys_deep_inside_reserve():
+    btc = make_series([100 + day for day in range(40)], product_id="BTC-USD")
+    eth = make_series([100 + day for day in range(40)], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    engine = PortfolioManagementBacktestEngine(
+        interval_days=7,
+        max_buy_step_dai="100",
+        reserve_dai="250",
+        reserve_buy_scale="0.50",
+        reserve_deep_buy_scale="0.25",
+    )
+    result = engine.run(
+        bundle,
+        BudgetedStatic50_50Rebalance(
+            cash_weight="0.00",
+            rebalance_fraction="1.00",
+            buy_budget_fraction="1.00",
+            sell_budget_fraction="0.00",
+        ),
+        datetime(2024, 1, 1, tzinfo=UTC),
+        initial_btc="0",
+        initial_eth="0",
+        initial_dai="100",
+    )
+
+    assert not [trade for trade in result.trades if trade.side == "buy"]
+
+
+def test_reserve_adjustment_keeps_strong_signals_partially_active():
+    engine = PortfolioManagementBacktestEngine(
+        reserve_dai="2500",
+        reserve_buy_scale="0.50",
+        reserve_deep_buy_scale="0.25",
+    )
+
+    state = type("State", (), {"dai_units": Decimal("2000")})()
+    adjusted = engine._reserve_adjusted_buy_fraction(
+        state,
+        Decimal("1.00"),
+        "deep_drawdown_eth_tilt",
+    )
+
+    assert adjusted == Decimal("0.50")
+
+
+def test_reserve_adjustment_blocks_both_weak_inside_reserve():
+    engine = PortfolioManagementBacktestEngine(
+        reserve_dai="2500",
+        reserve_buy_scale="0.50",
+        reserve_deep_buy_scale="0.25",
+    )
+
+    state = type("State", (), {"dai_units": Decimal("2000")})()
+    adjusted = engine._reserve_adjusted_buy_fraction(
+        state,
+        Decimal("1.00"),
+        "both_weak_btc_defensive",
+    )
+
+    assert adjusted == Decimal("0")
+
+
+def test_reserve_adjustment_blocks_medium_drawdown_deep_inside_reserve():
+    engine = PortfolioManagementBacktestEngine(
+        reserve_dai="2500",
+        reserve_buy_scale="0.50",
+        reserve_deep_buy_scale="0.25",
+    )
+
+    state = type("State", (), {"dai_units": Decimal("1000")})()
+    adjusted = engine._reserve_adjusted_buy_fraction(
+        state,
+        Decimal("1.00"),
+        "medium_drawdown_eth_tilt",
+    )
+
+    assert adjusted == Decimal("0")
+
+
 def test_portfolio_reporting_uses_portfolio_specific_columns():
     btc = make_series([100 + day for day in range(260)], product_id="BTC-USD")
     eth = make_series([100 + day for day in range(260)], product_id="ETH-USD")
