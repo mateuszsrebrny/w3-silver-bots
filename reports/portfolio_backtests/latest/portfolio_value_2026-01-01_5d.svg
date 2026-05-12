@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="800">
+<rect width="1400" height="800" fill="#f8fafc"/>
+<text x="700.0" y="42" text-anchor="middle" font-family="monospace" font-size="24" fill="#0f172a">Portfolio Value Over Time | start=2026-01-01 | interval=5d</text>
+<line x1="90" y1="710" x2="1310" y2="710" stroke="#334155" stroke-width="2"/>
+<line x1="90" y1="90" x2="90" y2="710" stroke="#334155" stroke-width="2"/>
+<line x1="90.0" y1="710" x2="90.0" y2="90" stroke="#cbd5e1" stroke-width="1"/>
+<text x="90.0" y="734" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">2026-01-01</text>
+<line x1="90" y1="710.0" x2="1310" y2="710.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="714.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">9163</text>
+<line x1="334.0" y1="710" x2="334.0" y2="90" stroke="#cbd5e1" stroke-width="1"/>
+<text x="334.0" y="734" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">2026-01-26</text>
+<line x1="90" y1="586.0" x2="1310" y2="586.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="590.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">9452</text>
+<line x1="578.0" y1="710" x2="578.0" y2="90" stroke="#cbd5e1" stroke-width="1"/>
+<text x="578.0" y="734" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">2026-02-20</text>
+<line x1="90" y1="462.0" x2="1310" y2="462.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="466.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">9741</text>
+<line x1="822.0" y1="710" x2="822.0" y2="90" stroke="#cbd5e1" stroke-width="1"/>
+<text x="822.0" y="734" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">2026-03-17</text>
+<line x1="90" y1="338.0" x2="1310" y2="338.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="342.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">10029</text>
+<line x1="1066.0" y1="710" x2="1066.0" y2="90" stroke="#cbd5e1" stroke-width="1"/>
+<text x="1066.0" y="734" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">2026-04-11</text>
+<line x1="90" y1="214.0" x2="1310" y2="214.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="218.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">10318</text>
+<line x1="1310.0" y1="710" x2="1310.0" y2="90" stroke="#cbd5e1" stroke-width="1"/>
+<text x="1310.0" y="734" text-anchor="middle" font-family="monospace" font-size="11" fill="#475569">2026-05-06</text>
+<line x1="90" y1="90.0" x2="1310" y2="90.0" stroke="#cbd5e1" stroke-width="1"/>
+<text x="78" y="94.0" text-anchor="end" font-family="monospace" font-size="12" fill="#475569">10607</text>
+<text x="700.0" y="782" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">time</text>
+<text x="24" y="400.0" transform="rotate(-90 24,400.0)" text-anchor="middle" font-family="monospace" font-size="16" fill="#0f172a">portfolio_value_usd</text>
+<line x1="970" y1="80" x2="988" y2="80" stroke="#0f766e" stroke-width="3"/>
+<text x="998" y="84" font-family="monospace" font-size="12" fill="#0f172a">budgeted_static_50_50_rebalance</text>
+<line x1="970" y1="104" x2="988" y2="104" stroke="#9333ea" stroke-width="3"/>
+<text x="998" y="108" font-family="monospace" font-size="12" fill="#0f172a">budgeted_drawdown_tilt_rebalance</text>
+<line x1="970" y1="128" x2="988" y2="128" stroke="#92400e" stroke-width="3"/>
+<text x="998" y="132" font-family="monospace" font-size="12" fill="#0f172a">budgeted_btc_defensive_eth_aggressive</text>
+<polyline points="90.0,350.62861862490945 138.8,342.66849220191824 187.60000000000002,351.6920829841279 236.4,335.14192444993 285.20000000000005,369.3486934663012 334.0,376.8188023701945 382.8,457.0976043660595 431.6,597.0143227731692 480.40000000000003,538.1238412637944 529.2,548.0273982968794 578.0,552.6145346133121 626.8,532.2238836972451 675.6,533.2220078319483 724.4,562.8516017655883 773.2,500.41318342776634 822.0,385.8133715354459 870.8000000000001,544.480185239765 919.6,585.029902860028 968.4,503.59185271129274 1017.2,507.8378972779418 1066.0,368.86435114105694 1114.8,308.91308621145544 1163.6,301.0208132435649 1212.4,242.0381040991627 1261.2,289.6728489211389 1310.0,203.51379556332336" fill="none" stroke="#0f766e" stroke-width="2.5"><title>budgeted_static_50_50_rebalance | end=2026-05-06 | return=3.43%</title></polyline>
+<polyline points="90.0,350.62861862490945 138.8,339.7528419150313 187.60000000000002,352.061957583679 236.4,329.90359134324797 285.20000000000005,376.2509522333528 334.0,386.3494884147217 382.8,495.1739288802896 431.6,683.2251445051754 480.40000000000003,601.0751439403025 529.2,616.797572078547 578.0,622.5427198889575 626.8,588.6796508692563 675.6,592.7273306089435 724.4,638.1497392709288 773.2,542.4290303158191 822.0,357.23599773631844 870.8000000000001,608.0110785003209 919.6,672.2573578695042 968.4,537.6996009915703 1017.2,548.8581025046692 1066.0,325.9399610538312 1114.8,231.39040631352054 1163.6,224.2707708776386 1212.4,135.60805042070945 1261.2,214.17519757101314 1310.0,90.0" fill="none" stroke="#9333ea" stroke-width="2.5"><title>budgeted_drawdown_tilt_rebalance | end=2026-05-06 | return=6.07%</title></polyline>
+<polyline points="90.0,350.62861862490945 138.8,339.3408069518493 187.60000000000002,352.1014718838134 236.4,327.52539824530317 285.20000000000005,376.81200466357393 334.0,387.65555025357094 382.8,503.55649356725513 431.6,710.0 480.40000000000003,621.757194365349 529.2,633.6807471896038 578.0,642.2713169064555 626.8,617.7672169713151 675.6,614.994582374691 724.4,658.694147113437 773.2,565.3179167927311 822.0,407.120620855086 870.8000000000001,637.0703921325345 919.6,696.0975583816706 968.4,585.3264552288357 1017.2,584.587926784536 1066.0,383.82938347387733 1114.8,296.85708708354264 1163.6,277.81358292916593 1212.4,194.573988858103 1261.2,247.67891851378278 1310.0,134.32812863817617" fill="none" stroke="#92400e" stroke-width="2.5"><title>budgeted_btc_defensive_eth_aggressive | end=2026-05-06 | return=5.04%</title></polyline>
+</svg>

@@ -466,6 +466,8 @@ def format_top_weekly_strategy_summary(
     lines = [
         title,
         "",
+        "This summary ranks only the weekly (`7d`) runs from the current report set.",
+        "",
         "Rank | Strategy | Mean Return % | Min Return % | Max Return %",
         "--- | --- | ---: | ---: | ---:",
     ]
@@ -506,6 +508,122 @@ def write_top_weekly_strategy_summary(results, output_path, limit=TOP_STRATEGY_L
     return output_path
 
 
+def format_latest_readme(manifest):
+    initial_btc = manifest["initial_btc"]
+    initial_eth = manifest["initial_eth"]
+    initial_dai = manifest["initial_dai"]
+    interval_days = manifest["interval_days_options"]
+    interval_labels = [f"{days}d" for days in interval_days]
+    latest_data_date = max(
+        Path(path).read_text().splitlines()[-1].split(",")[0][:10]
+        for path in manifest["data_files"].values()
+    )
+    reserve_dai = manifest.get("reserve_dai")
+    reserve_buy_scale = manifest.get("reserve_buy_scale")
+    reserve_deep_buy_scale = manifest.get("reserve_deep_buy_scale")
+    max_buy_step_dai = manifest.get("max_buy_step_dai")
+
+    lines = [
+        "# Portfolio Backtests: Latest",
+        "",
+        "This directory is the current working view of the portfolio-management backtests.",
+        "",
+        "The current mirrored snapshot behind these files is:",
+        "",
+        f"- initial portfolio: `{initial_btc} BTC / {initial_eth} ETH / {initial_dai} DAI`",
+        f"- cadences: `{', '.join(interval_labels)}`",
+        f"- start dates: `{', '.join(manifest['since_dates'])}`",
+        f"- market data updated through `{latest_data_date}`",
+        f"- buy cap per rebalance step: `{max_buy_step_dai or 'none'} DAI`",
+        f"- sell cap per rebalance step: `{manifest.get('max_sell_step_dai') or 'none'}`",
+    ]
+    if reserve_dai is not None:
+        lines.extend(
+            [
+                f"- reserve floor: `{reserve_dai} DAI`",
+                f"- reserve buy scale below floor: `{reserve_buy_scale}`",
+                f"- reserve deep-drawdown buy scale below half-floor: `{reserve_deep_buy_scale}`",
+            ]
+        )
+
+    lines.extend(
+        [
+            "",
+            "The primary discussion in this directory now focuses on the **budgeted** strategies only:",
+            "",
+            "- `budgeted_static_50_50_rebalance`",
+            "- `budgeted_drawdown_tilt_rebalance`",
+            "- `budgeted_btc_defensive_eth_aggressive`",
+            "",
+            "Those are the strategies intended for realistic capped live execution.",
+            "",
+            "If you want immutable historical snapshots, use the timestamped run directories under `reports/portfolio_backtests/`.",
+            "",
+            "## What To Read First",
+            "",
+            "- [weekly_top3_summary.md](weekly_top3_summary.md)",
+            "  - current ranking for the weekly (`7d`) snapshot only",
+            "  - best place to start if you want the operator-facing weekly conclusions",
+            "",
+            "- [strategy_catalog.md](strategy_catalog.md)",
+            "  - strategy-by-strategy table across all tested intervals and quarterly starts",
+            "  - includes interval, total return, annualized return, drawdown, ending value, and whether the window finished below zero",
+            "",
+            "- [negative_windows.md](negative_windows.md)",
+            "  - only the start windows that ended with negative total return",
+            "  - useful for finding fragile entry points quickly",
+            "",
+            "- [manifest.json](manifest.json)",
+            "  - exact parameters, data files, and git commit for this mirrored snapshot",
+            "",
+            "## Main Data Files",
+            "",
+            "- [portfolio_strategy_results.csv](portfolio_strategy_results.csv)",
+            "  - machine-friendly raw result table",
+            "  - includes all tested strategies and intervals",
+            "",
+            "- [portfolio_strategy_results.md](portfolio_strategy_results.md)",
+            "  - readable Markdown export of the same full result table",
+            "",
+            "- [portfolio_strategy_results.txt](portfolio_strategy_results.txt)",
+            "  - plain fixed-width text table for terminal reading",
+            "",
+            "## Chart Types",
+            "",
+            "### Quarterly Equity Curves",
+            "",
+            "Files named like:",
+            "",
+            "- `portfolio_value_2020-01-01_7d.svg`",
+            "",
+            "These compare the **primary budgeted strategies** on one chart for one `(start, interval)` scenario.",
+            "",
+            "### Weekly Allocation/Trade Charts",
+            "",
+            "Files named like:",
+            "",
+            "- `weekly_strategy_budgeted_btc_defensive_eth_aggressive_2020-01-01.svg`",
+            "",
+            "These are single-strategy charts for one weekly start window.",
+            "",
+            "## Important Caveats",
+            "",
+            "- These are simplified backtests, not executable historical trading reconstructions.",
+            "- No tax model is included.",
+            "- Execution slippage is simplified.",
+            "- Weekly summaries rank only the `7d` runs, even when the raw tables include multiple intervals.",
+            "- The budgeted strategies here also include the configured DAI reserve behavior from `manifest.json`.",
+        ]
+    )
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_latest_readme(manifest, output_path):
+    output_path = Path(output_path)
+    output_path.write_text(format_latest_readme(manifest))
+    return output_path
+
+
 def format_strategy_catalog(results):
     grouped = {}
     for result in results:
@@ -525,14 +643,15 @@ def format_strategy_catalog(results):
         lines.append("")
         lines.append(f"`{sample.strategy_label}`")
         lines.append("")
-        lines.append("Start | End | Years | Return % | Annualized % | Max Drawdown % | Ending Value USD | Negative?")
-        lines.append("--- | --- | ---: | ---: | ---: | ---: | ---: | ---")
-        for result in sorted(strategy_results, key=lambda item: item.start_timestamp):
+        lines.append("Start | End | Interval | Years | Return % | Annualized % | Max Drawdown % | Ending Value USD | Negative?")
+        lines.append("--- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---")
+        for result in sorted(strategy_results, key=lambda item: (item.start_timestamp, item.contribution_interval)):
             years = (result.end_timestamp - result.start_timestamp).days / ANNUALIZATION_DAYS
             total_return = float(result.total_return_pct)
             lines.append(
                 f"{result.start_timestamp.date().isoformat()} | "
                 f"{result.end_timestamp.date().isoformat()} | "
+                f"{result.contribution_interval} | "
                 f"{years:.2f} | "
                 f"{total_return:.2f} | "
                 f"{annualized_return_pct(result):.2f} | "
@@ -819,9 +938,10 @@ def main():
     weekly_summary_path = write_top_weekly_strategy_summary(primary_results, run_dir / "weekly_top3_summary.md")
     strategy_catalog_path = write_strategy_catalog(primary_results, run_dir / "strategy_catalog.md")
     negative_windows_path = write_negative_window_summary(primary_results, run_dir / "negative_windows.md")
+    latest_readme_path = write_latest_readme(manifest, run_dir / "README.md")
     copy_outputs_to_latest(plot_paths, latest_dir)
     copy_outputs_to_latest(
-        weekly_plot_paths + [weekly_summary_path, strategy_catalog_path, negative_windows_path],
+        weekly_plot_paths + [weekly_summary_path, strategy_catalog_path, negative_windows_path, latest_readme_path],
         latest_dir,
     )
 
@@ -845,6 +965,7 @@ def main():
     print(f"Saved weekly top strategy summary: {weekly_summary_path}")
     print(f"Saved strategy catalog: {strategy_catalog_path}")
     print(f"Saved negative-window summary: {negative_windows_path}")
+    print(f"Saved latest README: {latest_readme_path}")
 
 
 if __name__ == "__main__":
