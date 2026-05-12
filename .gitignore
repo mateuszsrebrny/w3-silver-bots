@@ -5,3 +5,5 @@ __pycache__/
 *.swp
 l.html
 .env
+.env.old
+reports/transfers/
