@@ -1,3 +1,4 @@
+import argparse
 from dotenv import load_dotenv
 import os
 from dataclasses import dataclass
@@ -67,6 +68,21 @@ def print_balances(token_balances):
         print(token_balance)
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Track portfolio balances across configured chains.")
+    parser.add_argument(
+        "--wallet",
+        help="Track only this wallet address. If omitted, load WALLET and optionally BOT_WALLET from .env.",
+    )
+    parser.add_argument(
+        "--chain",
+        action="append",
+        choices=DEFAULT_CHAINS,
+        help="Limit tracking to this chain. Repeat the flag to query multiple chains.",
+    )
+    return parser.parse_args()
+
+
 def build_balances(
     chains,
     wallets,
@@ -130,16 +146,24 @@ def load_wallets_from_env():
     return wallets
 
 
+def load_wallets(wallet=None):
+    if wallet:
+        return [WalletSpec("wallet", wallet)]
+    return load_wallets_from_env()
+
+
 def main():
     load_dotenv()
-    wallets = load_wallets_from_env()
+    args = parse_args()
+    wallets = load_wallets(wallet=args.wallet)
+    chains = args.chain or DEFAULT_CHAINS
     dry_run = True
 
     for wallet in wallets:
         print(f"Wallet [{wallet.label}]: {wallet.address}")
     BlockchainAccess.load_config()
 
-    token_balances = build_balances(DEFAULT_CHAINS, wallets, dry_run=dry_run)
+    token_balances = build_balances(chains, wallets, dry_run=dry_run)
     sort_balances(token_balances)
     print_balances(token_balances)
 

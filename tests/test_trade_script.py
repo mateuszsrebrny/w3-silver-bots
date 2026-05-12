@@ -38,6 +38,26 @@ def test_parse_args_accepts_expected_trade_shape(monkeypatch):
     assert args.execute is False
 
 
+def test_parse_args_accepts_preview_flag(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--to-token",
+            "eth",
+            "--amount",
+            "100",
+            "--preview",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.preview is True
+    assert args.execute is False
+
+
 def test_fetch_route_uses_kyber_v1_get(monkeypatch):
     captured = {}
 
@@ -210,6 +230,7 @@ def test_main_preview_only_prints_trade_summary(monkeypatch, capsys):
     trade.main()
 
     output = capsys.readouterr().out
+    assert "Mode: preview" in output
     assert "Swap: 100 dai -> eth" in output
     assert "Approval needed: True" in output
     assert "Preview only. Use --execute to actually send the trade." in output

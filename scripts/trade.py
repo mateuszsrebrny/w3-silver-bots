@@ -60,6 +60,11 @@ def parse_args():
     parser.add_argument("--amount", required=True, help="Input token amount in human units, e.g. 100")
     parser.add_argument("--slippage-bps", type=int, default=DEFAULT_SLIPPAGE_BPS)
     parser.add_argument("--deadline-seconds", type=int, default=DEFAULT_DEADLINE_SECONDS)
+    parser.add_argument(
+        "--preview",
+        action="store_true",
+        help="Preview only. This is already the default unless --execute is set.",
+    )
     parser.add_argument("--execute", action="store_true", help="Actually send transactions. Default is preview only.")
     parser.add_argument("--yes", action="store_true", help="Skip interactive confirmation when --execute is set.")
     parser.add_argument("--allowance-buffer-bps", type=int, default=0, help="Optional approval buffer above the input amount.")
@@ -208,6 +213,7 @@ def maybe_confirm(args):
 
 
 def print_preview(args, wallet, route, encoded_swap, input_amount, expected_amount_out, approval_needed, approval_amount, approval_gas, swap_gas):
+    print("Mode: execute" if args.execute else "Mode: preview")
     print(f"Wallet: {wallet}")
     print(f"Chain: {args.chain}")
     print(f"Swap: {input_amount} {args.from_token} -> {args.to_token}")

@@ -1,5 +1,6 @@
 from pathlib import Path
 import runpy
+import sys
 
 import yaml
 
@@ -100,6 +101,31 @@ def test_build_balances_supports_multiple_wallets(monkeypatch):
     assert str(balances[0]) == "bal @ polygon [external]: 7 = 21 usdc"
 
 
+def test_parse_args_accepts_wallet(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["portfolio_tracker.py", "--wallet", "0xabc"],
+    )
+
+    args = portfolio_tracker.parse_args()
+
+    assert args.wallet == "0xabc"
+    assert args.chain is None
+
+
+def test_parse_args_accepts_repeated_chain(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["portfolio_tracker.py", "--chain", "arbitrum", "--chain", "ethereum"],
+    )
+
+    args = portfolio_tracker.parse_args()
+
+    assert args.chain == ["arbitrum", "ethereum"]
+
+
 def test_all_tracked_tokens_exist_in_config():
     config_path = Path(__file__).resolve().parents[1] / "chains.config.yaml"
     config = yaml.safe_load(config_path.read_text())
@@ -118,10 +144,20 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     monkeypatch.setenv("WALLET", "0xwallet")
     monkeypatch.setenv("BOT_WALLET", "0xbot")
     monkeypatch.setattr(portfolio_tracker, "DEFAULT_CHAINS", ["polygon"])
-    monkeypatch.setattr(portfolio_tracker, "build_balances", lambda chains, wallets, dry_run=True, value_token="usdc", blockchain_access_cls=None: ["b2", "b1"])
+    build_call = {}
+    def fake_build_balances(chains, wallets, dry_run=True, value_token="usdc", blockchain_access_cls=None):
+        build_call["chains"] = chains
+        return ["b2", "b1"]
+
+    monkeypatch.setattr(portfolio_tracker, "build_balances", fake_build_balances)
     monkeypatch.setattr(portfolio_tracker, "sort_balances", lambda balances: balances.reverse())
     monkeypatch.setattr(portfolio_tracker, "print_balances", lambda balances: print(f"balances={balances}"))
     monkeypatch.setattr(portfolio_tracker, "load_dotenv", lambda: None)
+    monkeypatch.setattr(
+        portfolio_tracker,
+        "parse_args",
+        lambda: type("Args", (), {"wallet": None, "chain": ["polygon"]})(),
+    )
 
     class FakeBlockchainAccessClass:
         @staticmethod
@@ -133,6 +169,7 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     portfolio_tracker.main()
 
     captured = capsys.readouterr()
+    assert build_call["chains"] == ["polygon"]
     assert "Wallet [external]: 0xwallet" in captured.out
     assert "Wallet [bot]: 0xbot" in captured.out
     assert "config_loaded" in captured.out
@@ -151,8 +188,18 @@ def test_load_wallets_from_env_supports_wallet_and_bot_wallet(monkeypatch):
     ]
 
 
+def test_load_wallet_prefers_cli_wallet_over_env(monkeypatch):
+    monkeypatch.setenv("WALLET", "0xenv")
+    monkeypatch.setenv("BOT_WALLET", "0xbot")
+
+    wallets = portfolio_tracker.load_wallets(wallet="0xcli")
+
+    assert wallets == [portfolio_tracker.WalletSpec("wallet", "0xcli")]
+
+
 def test_module_runs_main_when_executed_as_script(monkeypatch):
     monkeypatch.setenv("WALLET", "0xwallet")
+    monkeypatch.setattr(sys, "argv", ["portfolio_tracker.py"])
 
     class FakeBlockchainAccessClass:
         @staticmethod
