@@ -7,3 +7,4 @@ l.html
 .env
 .env.old
 reports/transfers/
+reports/portfolio_backtests/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*/
