@@ -1,4 +1,5 @@
 from pathlib import Path
+from decimal import Decimal
 import runpy
 import sys
 
@@ -20,6 +21,11 @@ class FakeBlockchainAccess:
 
     def check_kyberswap_price(self, path, quantity):
         return quantity * 3
+
+    def get_aave_supply_apr(self, token):
+        if token == "adai":
+            return Decimal("4.125")
+        return None
 
 
 def test_token_balance_fetches_balance_and_value():
@@ -45,6 +51,17 @@ def test_token_balance_uses_requested_value_token():
     assert token_balance.value_token == "dai"
     assert token_balance.value == 21
     assert str(token_balance) == "bal @ polygon: 7 = 21 dai"
+
+
+def test_token_balance_includes_aave_apr_when_available():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("arbitrum", True),
+        "adai",
+        "0xwallet",
+    )
+
+    assert token_balance.interest_apr == Decimal("4.125")
+    assert str(token_balance) == "adai @ arbitrum: 7 = 21 usdc (Aave supply APR: 4.12%)"
 
 
 def test_sort_balances_orders_by_value_descending():

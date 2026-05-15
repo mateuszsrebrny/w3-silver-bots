@@ -130,6 +130,9 @@ networks:
         dai:
           address: "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1"
           decimals: "ether"
+        adai:
+          address: "0x82e64f49ed5ec1bc6e43dad4fc8af9bb3a2312ee"
+          decimals: "ether"
         eth:
           address: "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
           decimals: "ether"

@@ -7,6 +7,52 @@ import yaml
 from web3 import Web3
 
 NATIVE_TOKEN_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+AAVE_POOL_BY_CHAIN = {
+    "ethereum": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
+    "arbitrum": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+}
+AAVE_ATOKEN_UNDERLYING_BY_CHAIN = {
+    "ethereum": {
+        "adai": "dai",
+    },
+    "arbitrum": {
+        "adai": "dai",
+    },
+}
+AAVE_POOL_ABI = [
+    {
+        "inputs": [
+            {"internalType": "address", "name": "asset", "type": "address"},
+        ],
+        "name": "getReserveData",
+        "outputs": [
+            {
+                "components": [
+                    {"internalType": "uint256", "name": "configuration", "type": "uint256"},
+                    {"internalType": "uint128", "name": "liquidityIndex", "type": "uint128"},
+                    {"internalType": "uint128", "name": "currentLiquidityRate", "type": "uint128"},
+                    {"internalType": "uint128", "name": "variableBorrowIndex", "type": "uint128"},
+                    {"internalType": "uint128", "name": "currentVariableBorrowRate", "type": "uint128"},
+                    {"internalType": "uint128", "name": "currentStableBorrowRate", "type": "uint128"},
+                    {"internalType": "uint40", "name": "lastUpdateTimestamp", "type": "uint40"},
+                    {"internalType": "uint16", "name": "id", "type": "uint16"},
+                    {"internalType": "address", "name": "aTokenAddress", "type": "address"},
+                    {"internalType": "address", "name": "stableDebtTokenAddress", "type": "address"},
+                    {"internalType": "address", "name": "variableDebtTokenAddress", "type": "address"},
+                    {"internalType": "address", "name": "interestRateStrategyAddress", "type": "address"},
+                    {"internalType": "uint128", "name": "accruedToTreasury", "type": "uint128"},
+                    {"internalType": "uint128", "name": "unbacked", "type": "uint128"},
+                    {"internalType": "uint128", "name": "isolationModeTotalDebt", "type": "uint128"},
+                ],
+                "internalType": "struct DataTypes.ReserveData",
+                "name": "",
+                "type": "tuple",
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    }
+]
 
 
 class BlockchainAccess:
@@ -196,6 +242,24 @@ class BlockchainAccess:
         if cache_key not in self._contract:
             self._contract[cache_key] = self.get_w3().eth.contract(address=address, abi=abi)
         return self._contract[cache_key]
+
+    def get_aave_supply_apr(self, token):
+        chain_tokens = AAVE_ATOKEN_UNDERLYING_BY_CHAIN.get(self._chain, {})
+        underlying_token = chain_tokens.get(token)
+        pool_address = AAVE_POOL_BY_CHAIN.get(self._chain)
+        if underlying_token is None or pool_address is None:
+            return None
+
+        contract = self._get_cached_contract(
+            f"aave_pool:{self._chain}",
+            Web3.to_checksum_address(pool_address),
+            AAVE_POOL_ABI,
+        )
+        reserve_data = contract.functions.getReserveData(
+            self.get_token_contract_address(underlying_token)
+        ).call()
+        liquidity_rate_ray = int(reserve_data[2])
+        return (Decimal(liquidity_rate_ray) / Decimal(10**27)) * Decimal("100")
 
     @classmethod
     def _load_abi_result(cls, abi_path):

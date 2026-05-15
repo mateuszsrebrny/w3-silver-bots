@@ -1,4 +1,5 @@
 import argparse
+from decimal import Decimal
 from dotenv import load_dotenv
 import os
 from dataclasses import dataclass
@@ -11,7 +12,7 @@ TRACKED_TOKENS = {
     "polygon": ["pol", "aave", "link", "ghst", "bal"],
     "optimism": ["eth", "velo"],
     "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
-    "arbitrum": ["aarb", "eth", "dai", "wbtc"],
+    "arbitrum": ["adai", "aarb", "eth", "dai", "wbtc"],
 }
 
 
@@ -37,6 +38,7 @@ class TokenBalance:
         self.value_token = value_token
         self.balance = self._fetch_balance()
         self.value = self._fetch_value()
+        self.interest_apr = self._fetch_interest_apr()
 
     def _fetch_balance(self):
         """Fetch the balance of the token for the given wallet."""
@@ -50,11 +52,26 @@ class TokenBalance:
             self.balance,
         )
 
+    def _fetch_interest_apr(self):
+        get_aave_supply_apr = getattr(self._blockchain_access, "get_aave_supply_apr", None)
+        if get_aave_supply_apr is None:
+            return None
+
+        try:
+            return get_aave_supply_apr(self.token_name)
+        except Exception:
+            return None
+
+    def _interest_suffix(self):
+        if self.interest_apr is None:
+            return ""
+        return f" (Aave supply APR: {self.interest_apr.quantize(Decimal('0.01'))}%)"
+
     def __str__(self):
         wallet_part = f" [{self.wallet_label}]" if self.wallet_label else ""
         return (
             f"{self.token_name} @ {self._blockchain_access.get_chain()}{wallet_part}: "
-            f"{self.balance} = {self.value} {self.value_token}"
+            f"{self.balance} = {self.value} {self.value_token}{self._interest_suffix()}"
         )
 
     def __lt__(self, other):

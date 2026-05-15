@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+import botweb3lib
 from botweb3lib import BlockchainAccess, NATIVE_TOKEN_ADDRESS
 
 
@@ -226,3 +227,35 @@ def test_estimate_gas_falls_back_and_warns():
     assert gas == 21000
     assert len(warnings) == 1
     assert "Falling back to gas limit 21000" in warnings[0]
+
+
+def test_get_aave_supply_apr_reads_liquidity_rate(monkeypatch, sample_config):
+    class FakeCall:
+        @staticmethod
+        def call():
+            return (0, 0, 42 * 10**24, 0, 0, 0, 0, 0, "0x0", "0x0", "0x0", "0x0", 0, 0, 0)
+
+    class FakeFunctions:
+        @staticmethod
+        def getReserveData(asset):
+            assert asset == "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
+            return FakeCall()
+
+    class FakePoolContract:
+        functions = FakeFunctions()
+
+    class FakeEth:
+        @staticmethod
+        def contract(address, abi):
+            return FakePoolContract()
+
+    class FakeW3:
+        eth = FakeEth()
+
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+    blockchain_access._w3 = FakeW3()
+    monkeypatch.setitem(botweb3lib.AAVE_POOL_BY_CHAIN, "polygon", "0x1111111111111111111111111111111111111111")
+    monkeypatch.setitem(botweb3lib.AAVE_ATOKEN_UNDERLYING_BY_CHAIN, "polygon", {"ausdc": "usdc"})
+
+    assert blockchain_access.get_aave_supply_apr("ausdc") == Decimal("4.2")
