@@ -10,7 +10,7 @@ DEFAULT_VALUE_TOKEN = "usdc"
 
 TRACKED_TOKENS = {
     "polygon": ["pol", "aave", "link", "ghst", "bal"],
-    "optimism": ["aop", "eth", "velo"],
+    "optimism": ["aop", "moowstethweth", "eth", "velo"],
     "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
     "arbitrum": ["adai", "aarb", "eth", "dai", "wbtc"],
 }
@@ -47,25 +47,46 @@ class TokenBalance:
         ]
 
     def _fetch_value(self):
+        is_beefy_vault_token = getattr(self._blockchain_access, "is_beefy_vault_token", None)
+        if is_beefy_vault_token is not None and is_beefy_vault_token(self.token_name):
+            return self._blockchain_access.get_beefy_vault_value(self.token_name, self.balance)
         return self._blockchain_access.check_kyberswap_price(
             [self.token_name, self.value_token],
             self.balance,
         )
 
     def _fetch_interest_apr(self):
+        get_beefy_vault_apy = getattr(self._blockchain_access, "get_beefy_vault_apy", None)
+        is_beefy_vault_token = getattr(self._blockchain_access, "is_beefy_vault_token", None)
+        if (
+            get_beefy_vault_apy is not None
+            and is_beefy_vault_token is not None
+            and is_beefy_vault_token(self.token_name)
+        ):
+            try:
+                apy = get_beefy_vault_apy(self.token_name)
+                if apy is not None:
+                    return ("Beefy APY", apy)
+            except Exception:
+                return None
+
         get_aave_supply_apr = getattr(self._blockchain_access, "get_aave_supply_apr", None)
         if get_aave_supply_apr is None:
             return None
 
         try:
-            return get_aave_supply_apr(self.token_name)
+            apr = get_aave_supply_apr(self.token_name)
+            if apr is None:
+                return None
+            return ("Aave supply APR", apr)
         except Exception:
             return None
 
     def _interest_suffix(self):
         if self.interest_apr is None:
             return ""
-        return f" (Aave supply APR: {self.interest_apr.quantize(Decimal('0.01'))}%)"
+        label, value = self.interest_apr
+        return f" ({label}: {value.quantize(Decimal('0.01'))}%)"
 
     def __str__(self):
         wallet_part = f" [{self.wallet_label}]" if self.wallet_label else ""

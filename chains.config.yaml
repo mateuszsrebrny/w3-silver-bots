@@ -71,6 +71,11 @@ networks:
         aop:
           address: "0x513c7e3a9c69ca3e22550ef58ac1c0088e918fff"
           decimals: "ether"
+        moowstethweth:
+          address: "0xBbfb5831dF1232864C72Fbd555456Ee0b2cbFd7C"
+          decimals: "ether"
+          beefy_vault_id: "velo-cow-op-wsteth-weth-vault"
+          beefy_oracle_id: "velo-cow-op-wsteth-weth"
         mai:
           address: "0xdFA46478F9e5EA86d57387849598dbFB2e964b02"
           decimals: "ether"

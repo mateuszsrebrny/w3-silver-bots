@@ -22,6 +22,19 @@ class FakeBlockchainAccess:
     def check_kyberswap_price(self, path, quantity):
         return quantity * 3
 
+    def is_beefy_vault_token(self, token):
+        return token == "moowstethweth"
+
+    def get_beefy_vault_value(self, token, balance):
+        assert token == "moowstethweth"
+        assert balance == 7
+        return Decimal("123.456")
+
+    def get_beefy_vault_apy(self, token):
+        if token == "moowstethweth":
+            return Decimal("0.33")
+        return None
+
     def get_aave_supply_apr(self, token):
         if token == "adai":
             return Decimal("4.125")
@@ -64,7 +77,7 @@ def test_token_balance_includes_aave_apr_when_available():
         "0xwallet",
     )
 
-    assert token_balance.interest_apr == Decimal("4.125")
+    assert token_balance.interest_apr == ("Aave supply APR", Decimal("4.125"))
     assert str(token_balance) == "adai @ arbitrum: 7 = 21 usdc (Aave supply APR: 4.12%)"
 
 
@@ -75,7 +88,7 @@ def test_token_balance_includes_aave_apr_for_aarb():
         "0xwallet",
     )
 
-    assert token_balance.interest_apr == Decimal("1.75")
+    assert token_balance.interest_apr == ("Aave supply APR", Decimal("1.75"))
     assert str(token_balance) == "aarb @ arbitrum: 7 = 21 usdc (Aave supply APR: 1.75%)"
 
 
@@ -86,8 +99,23 @@ def test_token_balance_includes_aave_apr_for_aop():
         "0xwallet",
     )
 
-    assert token_balance.interest_apr == Decimal("2.25")
+    assert token_balance.interest_apr == ("Aave supply APR", Decimal("2.25"))
     assert str(token_balance) == "aop @ optimism: 7 = 21 usdc (Aave supply APR: 2.25%)"
+
+
+def test_token_balance_uses_beefy_value_and_apy():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("optimism", True),
+        "moowstethweth",
+        "0xwallet",
+    )
+
+    assert token_balance.value == Decimal("123.456")
+    assert token_balance.interest_apr == ("Beefy APY", Decimal("0.33"))
+    assert (
+        str(token_balance)
+        == "moowstethweth @ optimism: 7 = 123.456 usdc (Beefy APY: 0.33%)"
+    )
 
 
 def test_sort_balances_orders_by_value_descending():

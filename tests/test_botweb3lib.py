@@ -11,9 +11,11 @@ from botweb3lib import BlockchainAccess, NATIVE_TOKEN_ADDRESS
 def reset_class_state():
     original_config = BlockchainAccess._config
     original_abi_cache = dict(BlockchainAccess._abi_cache)
+    original_beefy_api_cache = dict(BlockchainAccess._beefy_api_cache)
     yield
     BlockchainAccess._config = original_config
     BlockchainAccess._abi_cache = original_abi_cache
+    BlockchainAccess._beefy_api_cache = original_beefy_api_cache
 
 
 @pytest.fixture
@@ -37,6 +39,12 @@ def sample_config():
                         "wbtc": {
                             "address": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
                             "decimals": "lovelace",
+                        },
+                        "moousdc": {
+                            "address": "0x1111111111111111111111111111111111111111",
+                            "decimals": "ether",
+                            "beefy_vault_id": "test-vault",
+                            "beefy_oracle_id": "test-oracle",
                         },
                     }
                 },
@@ -259,3 +267,54 @@ def test_get_aave_supply_apr_reads_liquidity_rate(monkeypatch, sample_config):
     monkeypatch.setitem(botweb3lib.AAVE_ATOKEN_UNDERLYING_BY_CHAIN, "polygon", {"ausdc": "usdc"})
 
     assert blockchain_access.get_aave_supply_apr("ausdc") == Decimal("4.2")
+
+
+def test_beefy_vault_value_and_apy(monkeypatch, sample_config):
+    class FakeCall:
+        @staticmethod
+        def call():
+            return 1100000000000000000
+
+    class FakeFunctions:
+        @staticmethod
+        def getPricePerFullShare():
+            return FakeCall()
+
+    class FakeVaultContract:
+        functions = FakeFunctions()
+
+    class FakeEth:
+        @staticmethod
+        def contract(address, abi):
+            assert address == "0x1111111111111111111111111111111111111111"
+            return FakeVaultContract()
+
+    class FakeW3:
+        eth = FakeEth()
+
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, timeout):
+        assert timeout == 20
+        if url == "https://api.beefy.finance/lps":
+            return FakeResponse({"test-oracle": 2.5})
+        if url == "https://api.beefy.finance/apy/breakdown":
+            return FakeResponse({"test-vault": {"totalApy": 0.1234}})
+        raise AssertionError(url)
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+    blockchain_access._w3 = FakeW3()
+
+    assert blockchain_access.is_beefy_vault_token("moousdc") is True
+    assert blockchain_access.get_beefy_vault_value("moousdc", Decimal("3")) == Decimal("8.25")
+    assert blockchain_access.get_beefy_vault_apy("moousdc") == Decimal("12.3400")

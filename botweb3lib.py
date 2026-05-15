@@ -64,6 +64,7 @@ class BlockchainAccess:
 
     _config = None
     _abi_cache = {}
+    _beefy_api_cache = {}
     _kyberswap_chain_names = {
         "polygon": "polygon",
         "optimism": "optimism",
@@ -114,9 +115,15 @@ class BlockchainAccess:
     def get_decimals(self, token):
         return self.get_config()["contracts"]["erc20"][token]["decimals"]
 
+    def get_token_config(self, token):
+        return self.get_config()["contracts"]["erc20"][token]
+
     def is_native_token(self, token):
-        token_info = self.get_config()["contracts"]["erc20"][token]
+        token_info = self.get_token_config(token)
         return token_info.get("native", False)
+
+    def is_beefy_vault_token(self, token):
+        return "beefy_vault_id" in self.get_token_config(token)
 
     def get_all_tokens(self):
         return self.get_config()["contracts"]["erc20"].keys()
@@ -243,6 +250,14 @@ class BlockchainAccess:
         output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
         return output_path
 
+    @classmethod
+    def _get_beefy_json(cls, endpoint):
+        if endpoint not in cls._beefy_api_cache:
+            response = requests.get(f"https://api.beefy.finance/{endpoint}", timeout=20)
+            response.raise_for_status()
+            cls._beefy_api_cache[endpoint] = response.json()
+        return cls._beefy_api_cache[endpoint]
+
     def _get_cached_contract(self, cache_key, address, abi):
         if cache_key not in self._contract:
             self._contract[cache_key] = self.get_w3().eth.contract(address=address, abi=abi)
@@ -265,6 +280,50 @@ class BlockchainAccess:
         ).call()
         liquidity_rate_ray = int(reserve_data[2])
         return (Decimal(liquidity_rate_ray) / Decimal(10**27)) * Decimal("100")
+
+    def get_beefy_vault_id(self, token):
+        return self.get_token_config(token)["beefy_vault_id"]
+
+    def get_beefy_oracle_id(self, token):
+        return self.get_token_config(token)["beefy_oracle_id"]
+
+    def get_beefy_vault_price_per_full_share(self, token):
+        vault_abi = [
+            {
+                "inputs": [],
+                "name": "getPricePerFullShare",
+                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+                "stateMutability": "view",
+                "type": "function",
+            }
+        ]
+        vault_contract = self._get_cached_contract(
+            f"beefy_vault:{token}",
+            self.get_token_contract_address(token),
+            vault_abi,
+        )
+        return Decimal(vault_contract.functions.getPricePerFullShare().call()) / Decimal(10**18)
+
+    def get_beefy_lp_price_usd(self, token):
+        lps = self._get_beefy_json("lps")
+        oracle_id = self.get_beefy_oracle_id(token)
+        return Decimal(str(lps[oracle_id]))
+
+    def get_beefy_vault_value(self, token, share_balance):
+        price_per_full_share = self.get_beefy_vault_price_per_full_share(token)
+        lp_price_usd = self.get_beefy_lp_price_usd(token)
+        return Decimal(str(share_balance)) * price_per_full_share * lp_price_usd
+
+    def get_beefy_vault_apy(self, token):
+        apy_breakdown = self._get_beefy_json("apy/breakdown")
+        vault_id = self.get_beefy_vault_id(token)
+        vault_breakdown = apy_breakdown.get(vault_id)
+        if vault_breakdown is None:
+            return None
+        total_apy = vault_breakdown.get("totalApy")
+        if total_apy is None:
+            return None
+        return Decimal(str(total_apy)) * Decimal("100")
 
     @classmethod
     def _load_abi_result(cls, abi_path):
