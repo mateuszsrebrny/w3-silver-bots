@@ -514,10 +514,16 @@ def format_latest_readme(manifest):
     initial_dai = manifest["initial_dai"]
     interval_days = manifest["interval_days_options"]
     interval_labels = [f"{days}d" for days in interval_days]
-    latest_data_date = max(
-        Path(path).read_text().splitlines()[-1].split(",")[0][:10]
-        for path in manifest["data_files"].values()
-    )
+    available_data_dates = []
+    for path in manifest["data_files"].values():
+        data_path = Path(path)
+        if not data_path.exists():
+            continue
+        lines = data_path.read_text().splitlines()
+        if not lines:
+            continue
+        available_data_dates.append(lines[-1].split(",")[0][:10])
+    latest_data_date = max(available_data_dates) if available_data_dates else "unknown"
     reserve_dai = manifest.get("reserve_dai")
     reserve_buy_scale = manifest.get("reserve_buy_scale")
     reserve_deep_buy_scale = manifest.get("reserve_deep_buy_scale")
@@ -620,6 +626,7 @@ def format_latest_readme(manifest):
 
 def write_latest_readme(manifest, output_path):
     output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(format_latest_readme(manifest))
     return output_path
 
