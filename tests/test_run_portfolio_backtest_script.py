@@ -101,8 +101,9 @@ def test_parse_since_returns_utc_datetime():
     assert run_portfolio_backtest.parse_since("2020-01-01") == datetime(2020, 1, 1, tzinfo=UTC)
 
 
-def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
+def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys, tmp_path):
     captured = {}
+    output_dir = tmp_path / "custom-reports"
 
     monkeypatch.setattr(run_portfolio_backtest, "build_bundle", lambda data_root: "bundle")
 
@@ -151,8 +152,8 @@ def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys):
             "7",
             "--data-root",
             "custom-data",
-            "--output-dir",
-            "custom-reports",
+                "--output-dir",
+                str(output_dir),
             "--initial-btc",
             "1.5",
             "--initial-eth",

@@ -1,6 +1,9 @@
 from decimal import Decimal
 import json
+import os
 import sys
+
+import pytest
 
 from scripts import transfer
 
@@ -231,3 +234,195 @@ def test_save_receipt_writes_json(tmp_path):
     assert payload["metadata"]["token"] == "eth"
     assert payload["receipt"]["transactionHash"] == "0xaabb"
     assert payload["receipt"]["status"] == 1
+
+
+def test_load_recipient_requires_cli_or_env(monkeypatch):
+    class Args:
+        to = None
+        to_env_var = "WALLET"
+
+    monkeypatch.delenv("WALLET", raising=False)
+
+    with pytest.raises(ValueError, match="Recipient not provided"):
+        transfer.load_recipient(Args())
+
+
+def test_main_rejects_sender_matching_recipient(monkeypatch):
+    class FakeBlockchainAccess:
+        def __init__(self, chain, dry_run):
+            self.chain = chain
+            self.dry_run = dry_run
+
+        @classmethod
+        def load_config(cls, config_path):
+            return None
+
+    monkeypatch.setattr(transfer, "BlockchainAccess", FakeBlockchainAccess)
+    monkeypatch.setattr(transfer, "load_private_key", lambda env_var: "0x" + "11" * 32)
+    monkeypatch.setattr(transfer, "wallet_from_private_key", lambda private_key: "0xsame")
+    monkeypatch.setattr(transfer.Web3, "to_checksum_address", lambda address: address)
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "transfer.py",
+            "--token",
+            "eth",
+            "--all",
+            "--to",
+            "0xsame",
+        ],
+    )
+
+    with pytest.raises(ValueError, match="Sender and recipient must be different"):
+        transfer.main()
+
+
+def test_main_execute_saves_receipt(monkeypatch, tmp_path, capsys):
+    class FakeBlockchainAccess:
+        def __init__(self, chain, dry_run):
+            self.chain = chain
+            self.dry_run = dry_run
+
+        @classmethod
+        def load_config(cls, config_path):
+            return None
+
+        @classmethod
+        def save_receipt(cls, receipt_dir, filename_stem, tx_hash, receipt, metadata):
+            path = tmp_path / f"{filename_stem}-{tx_hash[:10]}.json"
+            path.write_text(json.dumps({"metadata": metadata, "receipt": receipt}))
+            return path
+
+    class FakeEth:
+        @staticmethod
+        def wait_for_transaction_receipt(tx_hash, timeout):
+            assert tx_hash == "0xabc"
+            assert timeout == 180
+            return {"status": 1, "transactionHash": tx_hash}
+
+    class FakeW3:
+        eth = FakeEth()
+
+    plan = transfer.TransferPlan(
+        tx={"nonce": 1},
+        token="eth",
+        amount=Decimal("0.1"),
+        amount_wei=100,
+        gas_limit=21000,
+        gas_price_wei=200,
+        gas_cost_native=Decimal("0.0000042"),
+        balance_before_native=Decimal("1.0"),
+    )
+
+    monkeypatch.setattr(transfer, "BlockchainAccess", FakeBlockchainAccess)
+    monkeypatch.setattr(transfer, "load_private_key", lambda env_var: "0x" + "11" * 32)
+    monkeypatch.setattr(transfer, "wallet_from_private_key", lambda private_key: "0xsender")
+    monkeypatch.setattr(transfer.Web3, "to_checksum_address", lambda address: address)
+    monkeypatch.setattr(transfer, "build_transfer_plan", lambda *args, **kwargs: plan)
+    monkeypatch.setattr(transfer, "sign_and_send", lambda blockchain_access, tx, private_key: "0xabc")
+    monkeypatch.setattr(transfer, "maybe_confirm", lambda args: None)
+    monkeypatch.setattr(
+        FakeBlockchainAccess,
+        "get_w3",
+        lambda self: FakeW3(),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "transfer.py",
+            "--token",
+            "eth",
+            "--amount",
+            "0.1",
+            "--to",
+            "0xrecipient",
+            "--execute",
+            "--receipt-dir",
+            str(tmp_path),
+        ],
+    )
+
+    transfer.main()
+
+    output = capsys.readouterr().out
+    assert "Transfer tx sent: 0xabc" in output
+    assert "Receipt saved:" in output
+    assert "Receipt status: 1" in output
+    receipt_files = list(tmp_path.glob("arbitrum-eth-0xabc.json"))
+    assert len(receipt_files) == 1
+    payload = json.loads(receipt_files[0].read_text())
+    assert payload["metadata"]["sender"] == "0xsender"
+    assert payload["metadata"]["recipient"] == "0xrecipient"
+    assert payload["metadata"]["tx_hash"] == "0xabc"
+
+
+def test_main_execute_raises_on_failed_receipt(monkeypatch, tmp_path):
+    class FakeBlockchainAccess:
+        def __init__(self, chain, dry_run):
+            self.chain = chain
+            self.dry_run = dry_run
+
+        @classmethod
+        def load_config(cls, config_path):
+            return None
+
+        @classmethod
+        def save_receipt(cls, receipt_dir, filename_stem, tx_hash, receipt, metadata):
+            path = tmp_path / f"{filename_stem}-{tx_hash[:10]}.json"
+            path.write_text(json.dumps({"metadata": metadata, "receipt": receipt}))
+            return path
+
+    class FakeEth:
+        @staticmethod
+        def wait_for_transaction_receipt(tx_hash, timeout):
+            return {"status": 0, "transactionHash": tx_hash}
+
+    class FakeW3:
+        eth = FakeEth()
+
+    plan = transfer.TransferPlan(
+        tx={"nonce": 1},
+        token="eth",
+        amount=Decimal("0.1"),
+        amount_wei=100,
+        gas_limit=21000,
+        gas_price_wei=200,
+        gas_cost_native=Decimal("0.0000042"),
+        balance_before_native=Decimal("1.0"),
+    )
+
+    monkeypatch.setattr(transfer, "BlockchainAccess", FakeBlockchainAccess)
+    monkeypatch.setattr(transfer, "load_private_key", lambda env_var: "0x" + "11" * 32)
+    monkeypatch.setattr(transfer, "wallet_from_private_key", lambda private_key: "0xsender")
+    monkeypatch.setattr(transfer.Web3, "to_checksum_address", lambda address: address)
+    monkeypatch.setattr(transfer, "build_transfer_plan", lambda *args, **kwargs: plan)
+    monkeypatch.setattr(transfer, "sign_and_send", lambda blockchain_access, tx, private_key: "0xabc")
+    monkeypatch.setattr(transfer, "maybe_confirm", lambda args: None)
+    monkeypatch.setattr(
+        FakeBlockchainAccess,
+        "get_w3",
+        lambda self: FakeW3(),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "transfer.py",
+            "--token",
+            "eth",
+            "--amount",
+            "0.1",
+            "--to",
+            "0xrecipient",
+            "--execute",
+            "--receipt-dir",
+            str(tmp_path),
+        ],
+    )
+
+    with pytest.raises(RuntimeError, match="Transfer transaction failed"):
+        transfer.main()

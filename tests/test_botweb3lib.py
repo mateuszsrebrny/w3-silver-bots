@@ -159,3 +159,70 @@ def test_check_kyberswap_price_returns_zero_on_failure(monkeypatch, sample_confi
     blockchain_access = BlockchainAccess("polygon")
 
     assert blockchain_access.check_kyberswap_price(["usdc", "wbtc"], 1) == 0
+
+
+def test_build_fee_params_uses_eip1559_when_base_fee_present():
+    class FakeEth:
+        max_priority_fee = 7
+
+        @staticmethod
+        def get_block(block_name):
+            assert block_name == "latest"
+            return {"baseFeePerGas": 100}
+
+    class FakeW3:
+        eth = FakeEth()
+
+    fee_params = BlockchainAccess.build_fee_params(FakeW3())
+
+    assert fee_params == {
+        "maxFeePerGas": 207,
+        "maxPriorityFeePerGas": 7,
+        "type": 2,
+    }
+    assert BlockchainAccess.fee_cap_wei(fee_params) == 207
+
+
+def test_build_fee_params_falls_back_to_legacy_gas_price():
+    class FakeEth:
+        gas_price = 123
+
+        @staticmethod
+        def get_block(block_name):
+            assert block_name == "latest"
+            return {"baseFeePerGas": 0}
+
+        @property
+        def max_priority_fee(self):
+            raise RuntimeError("unsupported")
+
+    class FakeW3:
+        eth = FakeEth()
+
+    fee_params = BlockchainAccess.build_fee_params(FakeW3())
+
+    assert fee_params == {"gasPrice": 123}
+    assert BlockchainAccess.fee_cap_wei(fee_params) == 123
+
+
+def test_estimate_gas_falls_back_and_warns():
+    warnings = []
+
+    class FakeEth:
+        @staticmethod
+        def estimate_gas(tx):
+            raise RuntimeError("boom")
+
+    class FakeW3:
+        eth = FakeEth()
+
+    gas = BlockchainAccess.estimate_gas(
+        FakeW3(),
+        {"to": "0xabc"},
+        21000,
+        warning_printer=warnings.append,
+    )
+
+    assert gas == 21000
+    assert len(warnings) == 1
+    assert "Falling back to gas limit 21000" in warnings[0]

@@ -3,6 +3,8 @@ import json
 import os
 import sys
 
+import pytest
+
 from scripts import trade
 
 
@@ -157,12 +159,6 @@ def test_main_preview_only_prints_trade_summary(monkeypatch, capsys):
 
         def check_allowance(self, token, owner, spender):
             return Decimal("0")
-
-        def get_decimals(self, token):
-            return "ether"
-
-        def get_decimals(self, token):
-            return "ether"
 
         def get_decimals(self, token):
             return "ether"
@@ -483,3 +479,190 @@ def test_main_execute_saves_trade_receipt(monkeypatch, tmp_path, capsys):
     payload = json.loads(receipt_files[0].read_text())
     assert payload["metadata"]["approval_tx_hash"] == "0xapproval"
     assert payload["metadata"]["swap_tx_hash"] == "0xswap"
+
+
+def test_main_execute_raises_on_failed_approval_receipt(monkeypatch):
+    class FakeBlockchainAccess:
+        def __init__(self, chain, dry_run):
+            self.chain = chain
+            self.dry_run = dry_run
+
+        @classmethod
+        def load_config(cls, config_path):
+            return None
+
+        @classmethod
+        def my_fromWei(cls, amount_wei, unit):
+            if unit == "ether":
+                return Decimal(str(amount_wei)) / Decimal(str(10**18))
+            return Decimal(str(amount_wei))
+
+        @classmethod
+        def my_toWei(cls, amount, unit):
+            if unit == "ether":
+                return int(Decimal(str(amount)) * Decimal(str(10**18)))
+            return int(Decimal(str(amount)))
+
+        def check_kyberswap_price(self, pair, amount, client_id="w3-silver-bots", log_quote=True):
+            if pair == ["eth", "usdc"]:
+                return Decimal(str(amount)) * Decimal("500")
+            if pair == ["dai", "usdc"]:
+                return Decimal(str(amount))
+            return Decimal("0")
+
+        def check_allowance(self, token, owner, spender):
+            return Decimal("0")
+
+        def get_decimals(self, token):
+            return "ether"
+
+    monkeypatch.setattr(trade, "BlockchainAccess", FakeBlockchainAccess)
+    monkeypatch.setattr(trade, "load_private_key", lambda: "0x" + "11" * 32)
+    monkeypatch.setattr(trade, "wallet_from_private_key", lambda private_key: "0xwallet")
+    monkeypatch.setattr(
+        trade,
+        "fetch_route",
+        lambda blockchain_access, from_token, to_token, amount, wallet: trade.SwapRoute(
+            router_address="0xrouter",
+            route_summary={"amountOut": str(2 * 10**17), "gas": "123456"},
+        ),
+    )
+    monkeypatch.setattr(
+        trade,
+        "build_encoded_swap",
+        lambda blockchain_access, route, wallet, slippage_bps, deadline_seconds: trade.EncodedSwap(
+            router_address="0xrouter",
+            calldata="0xdead",
+            value_wei=0,
+        ),
+    )
+    monkeypatch.setattr(trade, "build_approval_tx", lambda *args, **kwargs: {"gas": 50000, "nonce": 0})
+    monkeypatch.setattr(trade, "build_swap_tx", lambda *args, **kwargs: {"gas": 120000, "nonce": 1})
+    monkeypatch.setattr(trade, "sign_and_send", lambda blockchain_access, tx, private_key: "0xapproval")
+    monkeypatch.setattr(trade, "wait_for_receipt", lambda blockchain_access, tx_hash, timeout_seconds: {"status": 0})
+    monkeypatch.setattr(trade, "maybe_confirm", lambda args: None)
+    monkeypatch.setattr(
+        trade,
+        "assess_gas_cost",
+        lambda blockchain_access, gas_limit, eth_usd_price=None: trade.GasAssessment(
+            gas_price_wei=100,
+            gas_limit=gas_limit,
+            gas_cost_eth=Decimal("0.001"),
+            gas_cost_usd=Decimal("2.30"),
+        ),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--to-token",
+            "eth",
+            "--amount",
+            "100",
+            "--execute",
+        ],
+    )
+    monkeypatch.setenv("BOT_PRIVATE_KEY", "0x" + "11" * 32)
+
+    with pytest.raises(RuntimeError, match="Approval transaction failed"):
+        trade.main()
+
+
+def test_main_execute_raises_on_failed_swap_receipt(monkeypatch, tmp_path, capsys):
+    class FakeBlockchainAccess:
+        def __init__(self, chain, dry_run):
+            self.chain = chain
+            self.dry_run = dry_run
+
+        @classmethod
+        def load_config(cls, config_path):
+            return None
+
+        @classmethod
+        def my_fromWei(cls, amount_wei, unit):
+            if unit == "ether":
+                return Decimal(str(amount_wei)) / Decimal(str(10**18))
+            return Decimal(str(amount_wei))
+
+        @classmethod
+        def my_toWei(cls, amount, unit):
+            if unit == "ether":
+                return int(Decimal(str(amount)) * Decimal(str(10**18)))
+            return int(Decimal(str(amount)))
+
+        @classmethod
+        def save_receipt(cls, receipt_dir, filename_stem, tx_hash, receipt, metadata):
+            path = tmp_path / f"{filename_stem}-{tx_hash[:10]}.json"
+            path.write_text(json.dumps({"metadata": metadata, "receipt": receipt}))
+            return path
+
+        def check_kyberswap_price(self, pair, amount, client_id="w3-silver-bots", log_quote=True):
+            if pair == ["eth", "usdc"]:
+                return Decimal(str(amount)) * Decimal("500")
+            if pair == ["dai", "usdc"]:
+                return Decimal(str(amount))
+            return Decimal("0")
+
+        def check_allowance(self, token, owner, spender):
+            return Decimal("1000")
+
+        def get_decimals(self, token):
+            return "ether"
+
+    monkeypatch.setattr(trade, "BlockchainAccess", FakeBlockchainAccess)
+    monkeypatch.setattr(trade, "load_private_key", lambda: "0x" + "11" * 32)
+    monkeypatch.setattr(trade, "wallet_from_private_key", lambda private_key: "0xwallet")
+    monkeypatch.setattr(
+        trade,
+        "fetch_route",
+        lambda blockchain_access, from_token, to_token, amount, wallet: trade.SwapRoute(
+            router_address="0xrouter",
+            route_summary={"amountOut": str(2 * 10**17), "gas": "123456"},
+        ),
+    )
+    monkeypatch.setattr(
+        trade,
+        "build_encoded_swap",
+        lambda blockchain_access, route, wallet, slippage_bps, deadline_seconds: trade.EncodedSwap(
+            router_address="0xrouter",
+            calldata="0xdead",
+            value_wei=0,
+        ),
+    )
+    monkeypatch.setattr(trade, "build_swap_tx", lambda *args, **kwargs: {"gas": 120000, "nonce": 1})
+    monkeypatch.setattr(trade, "sign_and_send", lambda blockchain_access, tx, private_key: "0xswap")
+    monkeypatch.setattr(
+        trade,
+        "wait_for_receipt",
+        lambda blockchain_access, tx_hash, timeout_seconds: {"status": 0, "transactionHash": tx_hash},
+    )
+    monkeypatch.setattr(trade, "maybe_confirm", lambda args: None)
+    monkeypatch.setattr(
+        trade,
+        "assess_gas_cost",
+        lambda blockchain_access, gas_limit, eth_usd_price=None: trade.GasAssessment(
+            gas_price_wei=100,
+            gas_limit=gas_limit,
+            gas_cost_eth=Decimal("0.001"),
+            gas_cost_usd=Decimal("2.30"),
+        ),
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--to-token",
+            "eth",
+            "--amount",
+            "100",
+            "--execute",
+            "--receipt-dir",
+            str(tmp_path),
+        ],
+    )
+    monkeypatch.setenv("BOT_PRIVATE_KEY", "0x" + "11" * 32)
+
+    with pytest.raises(RuntimeError, match="Swap transaction failed"):
+        trade.main()

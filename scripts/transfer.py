@@ -408,6 +408,8 @@ def main():
     )
     print(f"Receipt saved: {receipt_path}")
     print(f"Receipt status: {receipt['status']}")
+    if int(receipt["status"]) != 1:
+        raise RuntimeError(f"Transfer transaction failed: {tx_hash}")
 
 
 if __name__ == "__main__":
