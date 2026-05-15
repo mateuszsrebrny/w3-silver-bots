@@ -218,10 +218,9 @@ def test_save_receipt_writes_json(tmp_path):
     receipt = {"status": 1, "transactionHash": b"\xaa\xbb"}
     metadata = {"token": "eth", "tx_hash": "0xabc"}
 
-    path = transfer.save_receipt(
+    path = transfer.BlockchainAccess.save_receipt(
         tmp_path,
-        "arbitrum",
-        "eth",
+        "arbitrum-eth",
         "0xabc123",
         receipt,
         metadata,

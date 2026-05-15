@@ -29,6 +29,8 @@ DEFAULT_SLIPPAGE_BPS = 50
 DEFAULT_DEADLINE_SECONDS = 20 * 60
 DEFAULT_APPROVAL_GAS_LIMIT = 65000
 DEFAULT_SWAP_GAS_LIMIT = 900000
+DEFAULT_RECEIPT_TIMEOUT_SECONDS = 180
+DEFAULT_RECEIPT_DIR = "reports/trades"
 
 
 @dataclass(frozen=True)
@@ -52,6 +54,13 @@ class GasAssessment:
     gas_cost_usd: Decimal | None
 
 
+@dataclass(frozen=True)
+class QuoteValuation:
+    input_value_usd: Decimal | None
+    output_value_usd: Decimal | None
+    quote_discount_bps: Decimal | None
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Execute a DAI-funded Arbitrum swap with a local wallet.")
     parser.add_argument("--chain", default=DEFAULT_CHAIN, choices=["arbitrum"])
@@ -68,12 +77,27 @@ def parse_args():
     parser.add_argument("--execute", action="store_true", help="Actually send transactions. Default is preview only.")
     parser.add_argument("--yes", action="store_true", help="Skip interactive confirmation when --execute is set.")
     parser.add_argument("--allowance-buffer-bps", type=int, default=0, help="Optional approval buffer above the input amount.")
+    parser.add_argument(
+        "--receipt-timeout-seconds",
+        type=int,
+        default=DEFAULT_RECEIPT_TIMEOUT_SECONDS,
+        help="How long to wait for a mined approval receipt before sending the swap.",
+    )
+    parser.add_argument(
+        "--receipt-dir",
+        default=DEFAULT_RECEIPT_DIR,
+        help="Directory for saved JSON receipts",
+    )
     parser.add_argument("--config", default="chains.config.yaml")
     return parser.parse_args()
 
 
 def quantize_amount(value, places="0.000000"):
     return Decimal(value).quantize(Decimal(places), rounding=ROUND_DOWN)
+
+
+def format_bps_percent(bps):
+    return (Decimal(str(bps)) / Decimal("100")).quantize(Decimal("0.01"), rounding=ROUND_DOWN)
 
 
 def load_private_key():
@@ -147,13 +171,14 @@ def build_encoded_swap(blockchain_access, route, wallet, slippage_bps, deadline_
 def build_approval_tx(blockchain_access, token, owner, spender, amount_wei):
     contract = blockchain_access.get_token_contract(token)
     w3 = blockchain_access.get_w3()
+    fee_params = BlockchainAccess.build_fee_params(w3)
     tx = contract.functions.approve(spender, amount_wei).build_transaction(
         {
             "from": owner,
             "nonce": w3.eth.get_transaction_count(owner),
             "chainId": blockchain_access.get_chain_id(),
-            "gasPrice": w3.eth.gas_price,
             "gas": DEFAULT_APPROVAL_GAS_LIMIT,
+            **fee_params,
         }
     )
     tx["gas"] = _safe_estimate_gas(w3, tx, DEFAULT_APPROVAL_GAS_LIMIT)
@@ -162,6 +187,7 @@ def build_approval_tx(blockchain_access, token, owner, spender, amount_wei):
 
 def build_swap_tx(blockchain_access, sender, encoded_swap):
     w3 = blockchain_access.get_w3()
+    fee_params = BlockchainAccess.build_fee_params(w3)
     tx = {
         "from": sender,
         "to": Web3.to_checksum_address(encoded_swap.router_address),
@@ -169,23 +195,20 @@ def build_swap_tx(blockchain_access, sender, encoded_swap):
         "value": encoded_swap.value_wei,
         "nonce": w3.eth.get_transaction_count(sender),
         "chainId": blockchain_access.get_chain_id(),
-        "gasPrice": w3.eth.gas_price,
         "gas": DEFAULT_SWAP_GAS_LIMIT,
+        **fee_params,
     }
     tx["gas"] = _safe_estimate_gas(w3, tx, DEFAULT_SWAP_GAS_LIMIT)
     return tx
 
 
 def _safe_estimate_gas(w3, tx, fallback_gas_limit):
-    try:
-        return w3.eth.estimate_gas(tx)
-    except Exception:
-        return fallback_gas_limit
+    return BlockchainAccess.estimate_gas(w3, tx, fallback_gas_limit)
 
 
 def assess_gas_cost(blockchain_access, gas_limit, eth_usd_price=None):
     w3 = blockchain_access.get_w3()
-    gas_price_wei = int(w3.eth.gas_price)
+    gas_price_wei = BlockchainAccess.fee_cap_wei(BlockchainAccess.build_fee_params(w3))
     gas_cost_eth = Decimal(gas_price_wei * gas_limit) / Decimal(10**18)
     gas_cost_usd = None
     if eth_usd_price is not None:
@@ -204,6 +227,31 @@ def sign_and_send(blockchain_access, tx, private_key):
     return tx_hash.hex()
 
 
+def wait_for_receipt(blockchain_access, tx_hash, timeout_seconds):
+    return blockchain_access.get_w3().eth.wait_for_transaction_receipt(
+        tx_hash,
+        timeout=timeout_seconds,
+    )
+
+
+def save_trade_receipt(
+    receipt_dir,
+    chain,
+    from_token,
+    to_token,
+    tx_hash,
+    receipt,
+    metadata,
+):
+    return BlockchainAccess.save_receipt(
+        receipt_dir,
+        f"{chain}-{from_token}-to-{to_token}",
+        tx_hash,
+        receipt,
+        metadata,
+    )
+
+
 def maybe_confirm(args):
     if args.yes:
         return
@@ -212,24 +260,66 @@ def maybe_confirm(args):
         raise SystemExit("Cancelled")
 
 
-def print_preview(args, wallet, route, encoded_swap, input_amount, expected_amount_out, approval_needed, approval_amount, approval_gas, swap_gas):
+def assess_quote_value(blockchain_access, from_token, to_token, input_amount, expected_amount_out):
+    input_value_usd = blockchain_access.check_kyberswap_price([from_token, "usdc"], input_amount, log_quote=False)
+    output_value_usd = blockchain_access.check_kyberswap_price([to_token, "usdc"], expected_amount_out, log_quote=False)
+
+    if input_value_usd and output_value_usd:
+        quote_discount_bps = (
+            (Decimal(str(input_value_usd)) - Decimal(str(output_value_usd)))
+            / Decimal(str(input_value_usd))
+            * Decimal("10000")
+        )
+    else:
+        quote_discount_bps = None
+
+    return QuoteValuation(
+        input_value_usd=Decimal(str(input_value_usd)) if input_value_usd else None,
+        output_value_usd=Decimal(str(output_value_usd)) if output_value_usd else None,
+        quote_discount_bps=quote_discount_bps,
+    )
+
+
+def print_preview(
+    args,
+    wallet,
+    route,
+    input_amount,
+    expected_amount_out,
+    approval_needed,
+    approval_gas,
+    swap_gas,
+    quote_value,
+):
+    total_gas_cost_eth = swap_gas.gas_cost_eth
+    total_gas_cost_usd = swap_gas.gas_cost_usd
+    if approval_gas is not None:
+        total_gas_cost_eth += approval_gas.gas_cost_eth
+        if total_gas_cost_usd is not None and approval_gas.gas_cost_usd is not None:
+            total_gas_cost_usd += approval_gas.gas_cost_usd
+        else:
+            total_gas_cost_usd = None
+
     print("Mode: execute" if args.execute else "Mode: preview")
     print(f"Wallet: {wallet}")
     print(f"Chain: {args.chain}")
     print(f"Swap: {input_amount} {args.from_token} -> {args.to_token}")
     print(f"Router: {route.router_address}")
     print(f"Expected output: {quantize_amount(expected_amount_out)} {args.to_token}")
+    if quote_value.input_value_usd is not None:
+        print(f"Input value (usd est): {quantize_amount(quote_value.input_value_usd, '0.01')} usdc")
+    if quote_value.output_value_usd is not None:
+        print(f"Output value (usd est): {quantize_amount(quote_value.output_value_usd, '0.01')} usdc")
+    if quote_value.quote_discount_bps is not None:
+        print(
+            "Quote discount vs spot (rough): "
+            f"{format_bps_percent(quote_value.quote_discount_bps)}%"
+        )
     print(f"Route gas estimate (router units): {route.route_summary.get('gas')}")
     print(f"Approval needed: {approval_needed}")
-    if approval_needed:
-        print(f"Approval amount: {approval_amount} {args.from_token}")
-        print(f"Approval gas: {approval_gas.gas_limit} @ {approval_gas.gas_price_wei} wei")
-        print(f"Approval gas cost: {approval_gas.gas_cost_eth} ETH")
-    print(f"Swap tx value: {encoded_swap.value_wei} wei")
-    print(f"Swap gas: {swap_gas.gas_limit} @ {swap_gas.gas_price_wei} wei")
-    print(f"Swap gas cost: {swap_gas.gas_cost_eth} ETH")
-    if swap_gas.gas_cost_usd is not None:
-        print(f"Swap gas cost (usd est): {quantize_amount(swap_gas.gas_cost_usd, '0.01')}")
+    print(f"Total gas cost: {total_gas_cost_eth} ETH")
+    if total_gas_cost_usd is not None:
+        print(f"Total gas cost (usd est): {quantize_amount(total_gas_cost_usd, '0.01')} usdc")
 
 
 def main():
@@ -253,7 +343,14 @@ def main():
 
     amount_out_wei = int(route.route_summary["amountOut"])
     expected_amount_out = from_token_wei(blockchain_access, args.to_token, amount_out_wei)
-    eth_usd_price = blockchain_access.check_kyberswap_price(["eth", "usdc"], Decimal("1"))
+    eth_usd_price = blockchain_access.check_kyberswap_price(["eth", "usdc"], Decimal("1"), log_quote=False)
+    quote_value = assess_quote_value(
+        blockchain_access,
+        args.from_token,
+        args.to_token,
+        input_amount,
+        expected_amount_out,
+    )
 
     input_amount_wei = to_token_wei(blockchain_access, args.from_token, input_amount)
     approval_amount_wei = input_amount_wei * (10_000 + args.allowance_buffer_bps) // 10_000
@@ -272,20 +369,19 @@ def main():
         )
         approval_gas = assess_gas_cost(blockchain_access, approval_tx["gas"], eth_usd_price=eth_usd_price)
 
-    swap_tx = build_swap_tx(blockchain_access, wallet, encoded_swap)
-    swap_gas = assess_gas_cost(blockchain_access, swap_tx["gas"], eth_usd_price=eth_usd_price)
+    preview_swap_tx = build_swap_tx(blockchain_access, wallet, encoded_swap)
+    swap_gas = assess_gas_cost(blockchain_access, preview_swap_tx["gas"], eth_usd_price=eth_usd_price)
 
     print_preview(
         args=args,
         wallet=wallet,
         route=route,
-        encoded_swap=encoded_swap,
         input_amount=input_amount,
         expected_amount_out=expected_amount_out,
         approval_needed=approval_needed,
-        approval_amount=from_token_wei(blockchain_access, args.from_token, approval_amount_wei),
         approval_gas=approval_gas,
         swap_gas=swap_gas,
+        quote_value=quote_value,
     )
 
     if not args.execute:
@@ -294,12 +390,64 @@ def main():
 
     maybe_confirm(args)
 
+    approval_hash = None
+    approval_receipt = None
     if approval_tx is not None:
         approval_hash = sign_and_send(blockchain_access, approval_tx, private_key)
         print(f"Approval tx sent: {approval_hash}")
+        approval_receipt = wait_for_receipt(
+            blockchain_access,
+            approval_hash,
+            timeout_seconds=args.receipt_timeout_seconds,
+        )
+        if int(approval_receipt["status"]) != 1:
+            raise RuntimeError(f"Approval transaction failed: {approval_hash}")
 
+    swap_tx = build_swap_tx(blockchain_access, wallet, encoded_swap)
     swap_hash = sign_and_send(blockchain_access, swap_tx, private_key)
     print(f"Swap tx sent: {swap_hash}")
+    swap_receipt = wait_for_receipt(
+        blockchain_access,
+        swap_hash,
+        timeout_seconds=args.receipt_timeout_seconds,
+    )
+    metadata = {
+        "chain": args.chain,
+        "wallet": wallet,
+        "from_token": args.from_token,
+        "to_token": args.to_token,
+        "input_amount": str(input_amount),
+        "input_amount_wei": str(input_amount_wei),
+        "expected_amount_out": str(expected_amount_out),
+        "expected_amount_out_wei": str(amount_out_wei),
+        "approval_needed": approval_needed,
+        "approval_amount_wei": str(approval_amount_wei) if approval_needed else None,
+        "approval_tx_hash": approval_hash,
+        "route_router": route.router_address,
+        "route_gas_estimate": route.route_summary.get("gas"),
+        "quote_input_value_usd": str(quote_value.input_value_usd) if quote_value.input_value_usd is not None else None,
+        "quote_output_value_usd": str(quote_value.output_value_usd) if quote_value.output_value_usd is not None else None,
+        "quote_discount_bps": str(quote_value.quote_discount_bps) if quote_value.quote_discount_bps is not None else None,
+        "preview_swap_gas_limit": swap_gas.gas_limit,
+        "preview_swap_gas_price_wei": str(swap_gas.gas_price_wei),
+        "swap_tx_hash": swap_hash,
+    }
+    if approval_gas is not None:
+        metadata["preview_approval_gas_limit"] = approval_gas.gas_limit
+        metadata["preview_approval_gas_price_wei"] = str(approval_gas.gas_price_wei)
+    if approval_receipt is not None:
+        metadata["approval_receipt_status"] = int(approval_receipt["status"])
+    receipt_path = save_trade_receipt(
+        args.receipt_dir,
+        args.chain,
+        args.from_token,
+        args.to_token,
+        swap_hash,
+        swap_receipt,
+        metadata,
+    )
+    print(f"Receipt saved: {receipt_path}")
+    print(f"Receipt status: {swap_receipt['status']}")
 
 
 if __name__ == "__main__":

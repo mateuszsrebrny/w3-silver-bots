@@ -1,5 +1,7 @@
 from decimal import Decimal
+from datetime import datetime, timezone
 import json
+from pathlib import Path
 import requests
 import yaml
 from web3 import Web3
@@ -123,6 +125,73 @@ class BlockchainAccess:
             return quantity / 100
         return quantity
 
+    @classmethod
+    def fee_cap_wei(cls, fee_params):
+        if "maxFeePerGas" in fee_params:
+            return int(fee_params["maxFeePerGas"])
+        return int(fee_params["gasPrice"])
+
+    @classmethod
+    def build_fee_params(cls, w3):
+        latest_block = w3.eth.get_block("latest")
+        base_fee_wei = int(latest_block.get("baseFeePerGas", 0) or 0)
+        try:
+            priority_fee_wei = int(w3.eth.max_priority_fee)
+        except Exception:
+            priority_fee_wei = 100_000
+
+        if base_fee_wei > 0:
+            max_fee_per_gas_wei = (2 * base_fee_wei) + priority_fee_wei
+            return {
+                "maxFeePerGas": max_fee_per_gas_wei,
+                "maxPriorityFeePerGas": priority_fee_wei,
+                "type": 2,
+            }
+
+        gas_price_wei = int(w3.eth.gas_price)
+        return {"gasPrice": gas_price_wei}
+
+    @classmethod
+    def estimate_gas(cls, w3, tx, fallback_gas_limit, warning_printer=None):
+        try:
+            return int(w3.eth.estimate_gas(tx))
+        except Exception as exc:
+            if warning_printer is not None:
+                warning_printer(
+                    f"Gas estimation failed for tx to {tx.get('to')}: {exc}. "
+                    f"Falling back to gas limit {fallback_gas_limit}."
+                )
+            return fallback_gas_limit
+
+    @classmethod
+    def to_jsonable(cls, value):
+        if isinstance(value, bytes):
+            return "0x" + value.hex()
+        if isinstance(value, Decimal):
+            return str(value)
+        if isinstance(value, dict):
+            return {str(key): cls.to_jsonable(inner) for key, inner in value.items()}
+        if isinstance(value, (list, tuple)):
+            return [cls.to_jsonable(item) for item in value]
+        if hasattr(value, "items"):
+            return {str(key): cls.to_jsonable(inner) for key, inner in value.items()}
+        return value
+
+    @classmethod
+    def save_receipt(cls, receipt_dir, filename_stem, tx_hash, receipt, metadata):
+        receipt_path = Path(receipt_dir)
+        receipt_path.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        filename = f"{timestamp}-{filename_stem}-{tx_hash[:10]}.json"
+        output_path = receipt_path / filename
+        payload = {
+            "saved_at_utc": timestamp,
+            "metadata": metadata,
+            "receipt": cls.to_jsonable(dict(receipt)),
+        }
+        output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
+        return output_path
+
     def _get_cached_contract(self, cache_key, address, abi):
         if cache_key not in self._contract:
             self._contract[cache_key] = self.get_w3().eth.contract(address=address, abi=abi)
@@ -181,7 +250,9 @@ class BlockchainAccess:
 
         return balance
 
-    def check_kyberswap_price(self, pair, input_quantity, client_id="w3-silver-bots"):
+    def check_kyberswap_price(
+        self, pair, input_quantity, client_id="w3-silver-bots", log_quote=True
+    ):
         from_token = pair[0]
         to_token = pair[1]
 
@@ -215,7 +286,7 @@ class BlockchainAccess:
                 output_quantity_wei, self.get_decimals(to_token)
             )
 
-            if output_quantity > 0:
+            if log_quote and output_quantity > 0:
                 print("kyberswap:", input_quantity, from_token, "->", output_quantity, to_token)
 
             return output_quantity

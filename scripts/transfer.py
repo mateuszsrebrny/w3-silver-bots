@@ -2,10 +2,8 @@
 
 import argparse
 from dataclasses import dataclass
-from datetime import datetime, timezone
 from decimal import Decimal, ROUND_DOWN
 from dotenv import load_dotenv
-import json
 import os
 from pathlib import Path
 import sys
@@ -126,42 +124,13 @@ def from_token_wei(blockchain_access, token, amount_wei):
     return BlockchainAccess.my_fromWei(amount_wei, blockchain_access.get_decimals(token))
 
 
-def fee_cap_wei(fee_params):
-    if "maxFeePerGas" in fee_params:
-        return int(fee_params["maxFeePerGas"])
-    return int(fee_params["gasPrice"])
-
-
-def build_fee_params(w3):
-    latest_block = w3.eth.get_block("latest")
-    base_fee_wei = int(latest_block.get("baseFeePerGas", 0) or 0)
-    try:
-        priority_fee_wei = int(w3.eth.max_priority_fee)
-    except Exception:
-        priority_fee_wei = 100_000
-
-    if base_fee_wei > 0:
-        max_fee_per_gas_wei = (2 * base_fee_wei) + priority_fee_wei
-        return {
-            "maxFeePerGas": max_fee_per_gas_wei,
-            "maxPriorityFeePerGas": priority_fee_wei,
-            "type": 2,
-        }
-
-    gas_price_wei = int(w3.eth.gas_price)
-    return {"gasPrice": gas_price_wei}
-
-
 def estimate_gas(w3, tx, fallback_gas_limit):
-    try:
-        return int(w3.eth.estimate_gas(tx))
-    except Exception as exc:
-        print(
-            f"Gas estimation failed for tx to {tx.get('to')}: {exc}. "
-            f"Falling back to gas limit {fallback_gas_limit}.",
-            file=sys.stderr,
-        )
-        return fallback_gas_limit
+    return BlockchainAccess.estimate_gas(
+        w3,
+        tx,
+        fallback_gas_limit,
+        warning_printer=lambda message: print(message, file=sys.stderr),
+    )
 
 
 def buffered_gas_limit(estimated_gas, buffer_bps=DEFAULT_GAS_BUFFER_BPS):
@@ -178,8 +147,8 @@ def build_native_transfer_plan(
     gas_buffer_bps=DEFAULT_GAS_BUFFER_BPS,
 ):
     w3 = blockchain_access.get_w3()
-    fee_params = build_fee_params(w3)
-    gas_price_wei = fee_cap_wei(fee_params)
+    fee_params = BlockchainAccess.build_fee_params(w3)
+    gas_price_wei = BlockchainAccess.fee_cap_wei(fee_params)
     balance_wei = int(w3.eth.get_balance(sender))
     balance_native = from_token_wei(blockchain_access, token, balance_wei)
     nonce = w3.eth.get_transaction_count(sender)
@@ -270,8 +239,8 @@ def build_erc20_transfer_plan(
 ):
     w3 = blockchain_access.get_w3()
     contract = blockchain_access.get_token_contract(token)
-    fee_params = build_fee_params(w3)
-    gas_price_wei = fee_cap_wei(fee_params)
+    fee_params = BlockchainAccess.build_fee_params(w3)
+    gas_price_wei = BlockchainAccess.fee_cap_wei(fee_params)
     nonce = w3.eth.get_transaction_count(sender)
     balance_wei = int(contract.functions.balanceOf(sender).call())
     balance_native = from_token_wei(blockchain_access, "eth", int(w3.eth.get_balance(sender)))
@@ -353,35 +322,6 @@ def sign_and_send(blockchain_access, tx, private_key):
     return tx_hash.hex()
 
 
-def to_jsonable(value):
-    if isinstance(value, bytes):
-        return "0x" + value.hex()
-    if isinstance(value, Decimal):
-        return str(value)
-    if isinstance(value, dict):
-        return {str(key): to_jsonable(inner) for key, inner in value.items()}
-    if isinstance(value, (list, tuple)):
-        return [to_jsonable(item) for item in value]
-    if hasattr(value, "items"):
-        return {str(key): to_jsonable(inner) for key, inner in value.items()}
-    return value
-
-
-def save_receipt(receipt_dir, chain, token, tx_hash, receipt, metadata):
-    receipt_path = Path(receipt_dir)
-    receipt_path.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    filename = f"{timestamp}-{chain}-{token}-{tx_hash[:10]}.json"
-    output_path = receipt_path / filename
-    payload = {
-        "saved_at_utc": timestamp,
-        "metadata": metadata,
-        "receipt": to_jsonable(dict(receipt)),
-    }
-    output_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
-    return output_path
-
-
 def maybe_confirm(args):
     if args.yes:
         return
@@ -459,10 +399,9 @@ def main():
         "estimated_gas_cost_native": str(plan.gas_cost_native),
         "tx_hash": tx_hash,
     }
-    receipt_path = save_receipt(
+    receipt_path = BlockchainAccess.save_receipt(
         args.receipt_dir,
-        args.chain,
-        args.token,
+        f"{args.chain}-{args.token}",
         tx_hash,
         receipt,
         metadata,
