@@ -68,6 +68,9 @@ networks:
         op: 
           address: "0x4200000000000000000000000000000000000042"
           decimals: "ether"
+        aop:
+          address: "0x513c7e3a9c69ca3e22550ef58ac1c0088e918fff"
+          decimals: "ether"
         mai:
           address: "0xdFA46478F9e5EA86d57387849598dbFB2e964b02"
           decimals: "ether"
@@ -145,6 +148,9 @@ networks:
           decimals: "lovelace"
         aarb:
           address: "0x6533afac2E7BCCB20dca161449A13A32D391fb00"
+          decimals: "ether"
+        arb:
+          address: "0x912CE59144191C1204E64559FE8253a0e49E6548"
           decimals: "ether"
         usdc:
           address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"

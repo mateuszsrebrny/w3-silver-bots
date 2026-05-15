@@ -10,7 +10,7 @@ DEFAULT_VALUE_TOKEN = "usdc"
 
 TRACKED_TOKENS = {
     "polygon": ["pol", "aave", "link", "ghst", "bal"],
-    "optimism": ["eth", "velo"],
+    "optimism": ["aop", "eth", "velo"],
     "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
     "arbitrum": ["adai", "aarb", "eth", "dai", "wbtc"],
 }
@@ -83,6 +83,32 @@ class TokenBalance:
 def print_balances(token_balances):
     for token_balance in token_balances:
         print(token_balance)
+
+
+def summarize_by_chain(token_balances, value_token=DEFAULT_VALUE_TOKEN):
+    summaries = {}
+    for token_balance in token_balances:
+        chain = token_balance._blockchain_access.get_chain()
+        summaries.setdefault(chain, Decimal("0"))
+        summaries[chain] += Decimal(str(token_balance.value))
+    return {
+        chain: total.quantize(Decimal("0.000001"))
+        for chain, total in summaries.items()
+    }
+
+
+def summarize_total(token_balances):
+    total = Decimal("0")
+    for token_balance in token_balances:
+        total += Decimal(str(token_balance.value))
+    return total.quantize(Decimal("0.000001"))
+
+
+def print_summaries(token_balances, value_token=DEFAULT_VALUE_TOKEN):
+    chain_summaries = summarize_by_chain(token_balances, value_token=value_token)
+    for chain, total in chain_summaries.items():
+        print(f"Total @ {chain}: {total} {value_token}")
+    print(f"Total @ portfolio: {summarize_total(token_balances)} {value_token}")
 
 
 def parse_args():
@@ -183,6 +209,7 @@ def main():
     token_balances = build_balances(chains, wallets, dry_run=dry_run)
     sort_balances(token_balances)
     print_balances(token_balances)
+    print_summaries(token_balances)
 
 
 if __name__ == "__main__":

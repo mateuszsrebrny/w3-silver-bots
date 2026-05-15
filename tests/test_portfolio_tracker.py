@@ -25,6 +25,10 @@ class FakeBlockchainAccess:
     def get_aave_supply_apr(self, token):
         if token == "adai":
             return Decimal("4.125")
+        if token == "aarb":
+            return Decimal("1.75")
+        if token == "aop":
+            return Decimal("2.25")
         return None
 
 
@@ -64,6 +68,28 @@ def test_token_balance_includes_aave_apr_when_available():
     assert str(token_balance) == "adai @ arbitrum: 7 = 21 usdc (Aave supply APR: 4.12%)"
 
 
+def test_token_balance_includes_aave_apr_for_aarb():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("arbitrum", True),
+        "aarb",
+        "0xwallet",
+    )
+
+    assert token_balance.interest_apr == Decimal("1.75")
+    assert str(token_balance) == "aarb @ arbitrum: 7 = 21 usdc (Aave supply APR: 1.75%)"
+
+
+def test_token_balance_includes_aave_apr_for_aop():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("optimism", True),
+        "aop",
+        "0xwallet",
+    )
+
+    assert token_balance.interest_apr == Decimal("2.25")
+    assert str(token_balance) == "aop @ optimism: 7 = 21 usdc (Aave supply APR: 2.25%)"
+
+
 def test_sort_balances_orders_by_value_descending():
     low = portfolio_tracker.TokenBalance(FakeBlockchainAccess("polygon", True), "bal", "0xwallet")
     high = portfolio_tracker.TokenBalance(FakeBlockchainAccess("polygon", True), "aave", "0xwallet")
@@ -74,6 +100,36 @@ def test_sort_balances_orders_by_value_descending():
     portfolio_tracker.sort_balances(balances)
 
     assert balances == [high, low]
+
+
+def test_summarize_by_chain_and_total():
+    polygon = portfolio_tracker.TokenBalance(FakeBlockchainAccess("polygon", True), "bal", "0xwallet")
+    arbitrum = portfolio_tracker.TokenBalance(FakeBlockchainAccess("arbitrum", True), "adai", "0xwallet")
+    polygon.value = Decimal("10.5")
+    arbitrum.value = Decimal("2.25")
+
+    per_chain = portfolio_tracker.summarize_by_chain([polygon, arbitrum])
+    total = portfolio_tracker.summarize_total([polygon, arbitrum])
+
+    assert per_chain == {
+        "polygon": Decimal("10.500000"),
+        "arbitrum": Decimal("2.250000"),
+    }
+    assert total == Decimal("12.750000")
+
+
+def test_print_summaries_outputs_chain_and_portfolio_totals(capsys):
+    polygon = portfolio_tracker.TokenBalance(FakeBlockchainAccess("polygon", True), "bal", "0xwallet")
+    arbitrum = portfolio_tracker.TokenBalance(FakeBlockchainAccess("arbitrum", True), "adai", "0xwallet")
+    polygon.value = Decimal("10.5")
+    arbitrum.value = Decimal("2.25")
+
+    portfolio_tracker.print_summaries([polygon, arbitrum])
+
+    output = capsys.readouterr().out
+    assert "Total @ polygon: 10.500000 usdc" in output
+    assert "Total @ arbitrum: 2.250000 usdc" in output
+    assert "Total @ portfolio: 12.750000 usdc" in output
 
 
 def test_build_balances_uses_tracked_tokens(monkeypatch):
@@ -169,6 +225,7 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     monkeypatch.setattr(portfolio_tracker, "build_balances", fake_build_balances)
     monkeypatch.setattr(portfolio_tracker, "sort_balances", lambda balances: balances.reverse())
     monkeypatch.setattr(portfolio_tracker, "print_balances", lambda balances: print(f"balances={balances}"))
+    monkeypatch.setattr(portfolio_tracker, "print_summaries", lambda balances: print(f"summaries={balances}"))
     monkeypatch.setattr(portfolio_tracker, "load_dotenv", lambda: None)
     monkeypatch.setattr(
         portfolio_tracker,
@@ -191,6 +248,7 @@ def test_main_loads_runtime_and_prints(monkeypatch, capsys):
     assert "Wallet [bot]: 0xbot" in captured.out
     assert "config_loaded" in captured.out
     assert "balances=['b1', 'b2']" in captured.out
+    assert "summaries=['b1', 'b2']" in captured.out
 
 
 def test_load_wallets_from_env_supports_wallet_and_bot_wallet(monkeypatch):

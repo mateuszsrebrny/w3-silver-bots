@@ -10,6 +10,7 @@ NATIVE_TOKEN_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 AAVE_POOL_BY_CHAIN = {
     "ethereum": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
     "arbitrum": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
+    "optimism": "0x794a61358D6845594F94dc1DB02A252b5b4814aD",
 }
 AAVE_ATOKEN_UNDERLYING_BY_CHAIN = {
     "ethereum": {
@@ -17,6 +18,10 @@ AAVE_ATOKEN_UNDERLYING_BY_CHAIN = {
     },
     "arbitrum": {
         "adai": "dai",
+        "aarb": "arb",
+    },
+    "optimism": {
+        "aop": "op",
     },
 }
 AAVE_POOL_ABI = [
