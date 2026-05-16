@@ -99,6 +99,9 @@ networks:
         weth:
           address: "0x4200000000000000000000000000000000000006"
           decimals: "ether"
+        wsteth:
+          address: "0x1F32b1c2345538c0c6f582fCB022739c4A194Ebb"
+          decimals: "ether"
         qi:
           address: "0x3F56e0c36d275367b8C502090EDF38289b3dEa0d"
           decimals: "ether"

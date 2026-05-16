@@ -348,6 +348,64 @@ def test_beefy_vault_value_and_apy(monkeypatch, sample_config):
     assert blockchain_access.get_beefy_vault_apy("moousdc") == Decimal("12.3400")
 
 
+def test_beefy_vault_underlying_amounts(monkeypatch, sample_config):
+    class FakeCall:
+        def call(self):
+            return 2 * 10**18
+
+    class FakeFunctions:
+        @staticmethod
+        def getPricePerFullShare():
+            return FakeCall()
+
+    class FakeContract:
+        functions = FakeFunctions()
+
+    class FakeEth:
+        @staticmethod
+        def contract(address, abi):
+            return FakeContract()
+
+    class FakeW3:
+        eth = FakeEth()
+
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, timeout):
+        assert timeout == 20
+        assert url == "https://api.beefy.finance/lps/breakdown"
+        return FakeResponse(
+            {
+                "test-oracle": {
+                    "tokens": [
+                        "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
+                        "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
+                    ],
+                    "balances": ["100", "50"],
+                    "totalSupply": "10",
+                }
+            }
+        )
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+    blockchain_access._w3 = FakeW3()
+
+    assert blockchain_access.get_beefy_vault_underlying_amounts("moousdc", Decimal("3")) == {
+        "usdc": Decimal("60"),
+        "wbtc": Decimal("30"),
+    }
+
+
 def test_beefy_priced_token_value(monkeypatch, sample_config):
     class FakeResponse:
         def __init__(self, payload):

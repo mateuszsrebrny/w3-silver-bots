@@ -161,6 +161,13 @@ class BlockchainAccess:
     def get_token_contract_address(self, token):
         return self.get_contract_address("erc20", token)
 
+    def get_token_name_by_address(self, address):
+        address_lower = address.lower()
+        for token_name, token_info in self.get_config()["contracts"]["erc20"].items():
+            if token_info["address"].lower() == address_lower:
+                return token_name
+        return None
+
     def get_token_contract(self, token):
         self.init_token_contract(token)
         return self._contract.get(token)
@@ -321,6 +328,29 @@ class BlockchainAccess:
         price_per_full_share = self.get_beefy_vault_price_per_full_share(token)
         lp_price_usd = self.get_beefy_lp_price_usd(token)
         return Decimal(str(share_balance)) * price_per_full_share * lp_price_usd
+
+    def get_beefy_vault_underlying_amounts(self, token, share_balance):
+        lp_breakdowns = self._get_beefy_json("lps/breakdown")
+        oracle_id = self.get_beefy_oracle_id(token)
+        breakdown = lp_breakdowns.get(oracle_id)
+        if breakdown is None:
+            return {}
+
+        price_per_full_share = self.get_beefy_vault_price_per_full_share(token)
+        lp_amount = Decimal(str(share_balance)) * price_per_full_share
+        total_supply = Decimal(str(breakdown["totalSupply"]))
+        if total_supply == 0:
+            return {}
+
+        underlying_amounts = {}
+        for token_address, pool_balance in zip(breakdown["tokens"], breakdown["balances"]):
+            token_name = self.get_token_name_by_address(token_address)
+            if token_name is None:
+                continue
+            amount = lp_amount * Decimal(str(pool_balance)) / total_supply
+            underlying_amounts[token_name] = underlying_amounts.get(token_name, Decimal("0")) + amount
+
+        return underlying_amounts
 
     def get_beefy_vault_apy(self, token):
         apy_breakdown = self._get_beefy_json("apy/breakdown")

@@ -11,3 +11,4 @@ reports/aave_supplies/
 reports/aave_withdrawals/
 reports/portfolio_backtests/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*/
 reports/lp_backtests/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*/
+data/portfolio_snapshots/
