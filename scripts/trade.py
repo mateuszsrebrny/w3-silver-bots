@@ -62,10 +62,10 @@ class QuoteValuation:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Execute a DAI-funded Arbitrum swap with a local wallet.")
+    parser = argparse.ArgumentParser(description="Execute an Arbitrum swap with a local wallet.")
     parser.add_argument("--chain", default=DEFAULT_CHAIN, choices=["arbitrum"])
-    parser.add_argument("--from-token", default=DEFAULT_FROM_TOKEN, choices=["dai"])
-    parser.add_argument("--to-token", required=True, choices=["eth", "wbtc"])
+    parser.add_argument("--from-token", default=DEFAULT_FROM_TOKEN, choices=["dai", "weth", "wbtc", "wsteth"])
+    parser.add_argument("--to-token", required=True, choices=["dai", "eth", "weth", "wbtc", "wsteth"])
     parser.add_argument("--amount", required=True, help="Input token amount in human units, e.g. 100")
     parser.add_argument("--slippage-bps", type=int, default=DEFAULT_SLIPPAGE_BPS)
     parser.add_argument("--deadline-seconds", type=int, default=DEFAULT_DEADLINE_SECONDS)

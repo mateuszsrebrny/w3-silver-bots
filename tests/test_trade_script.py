@@ -41,6 +41,138 @@ def test_parse_args_accepts_expected_trade_shape(monkeypatch):
     assert args.execute is False
 
 
+def test_parse_args_accepts_wbtc_to_dai(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "wbtc",
+            "--to-token",
+            "dai",
+            "--amount",
+            "0.01",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "wbtc"
+    assert args.to_token == "dai"
+    assert args.amount == "0.01"
+
+
+def test_parse_args_accepts_dai_to_wsteth(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "dai",
+            "--to-token",
+            "wsteth",
+            "--amount",
+            "100",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "dai"
+    assert args.to_token == "wsteth"
+    assert args.amount == "100"
+
+
+def test_parse_args_accepts_wsteth_to_dai(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "wsteth",
+            "--to-token",
+            "dai",
+            "--amount",
+            "0.1",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "wsteth"
+    assert args.to_token == "dai"
+    assert args.amount == "0.1"
+
+
+def test_parse_args_accepts_weth_to_dai(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "weth",
+            "--to-token",
+            "dai",
+            "--amount",
+            "0.1",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "weth"
+    assert args.to_token == "dai"
+    assert args.amount == "0.1"
+
+
+def test_parse_args_accepts_wbtc_to_wsteth(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "wbtc",
+            "--to-token",
+            "wsteth",
+            "--amount",
+            "0.01",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "wbtc"
+    assert args.to_token == "wsteth"
+    assert args.amount == "0.01"
+
+
+def test_parse_args_accepts_wsteth_to_wbtc(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "wsteth",
+            "--to-token",
+            "wbtc",
+            "--amount",
+            "0.1",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "wsteth"
+    assert args.to_token == "wbtc"
+    assert args.amount == "0.1"
+
+
 def test_parse_args_accepts_preview_flag(monkeypatch):
     monkeypatch.setattr(
         sys,
