@@ -25,10 +25,35 @@ class FakeBlockchainAccess:
     def is_beefy_vault_token(self, token):
         return token == "moowstethweth"
 
+    def is_beefy_priced_token(self, token):
+        return token in {"beqi", "rbeqi", "rcowwmaticldo"}
+
     def get_beefy_vault_value(self, token, balance):
         assert token == "moowstethweth"
         assert balance == 7
         return Decimal("123.456")
+
+    def get_beefy_token_value(self, token, balance):
+        assert balance == 7
+        if token == "beqi":
+            return Decimal("8.75")
+        if token == "rbeqi":
+            return Decimal("8.75")
+        if token == "rcowwmaticldo":
+            return Decimal("42")
+        raise AssertionError(token)
+
+    def get_beefy_token_apr(self, token):
+        if token == "rbeqi":
+            return Decimal("22.237282073794604")
+        if token == "rcowwmaticldo":
+            return Decimal("25.771911991263097")
+        return None
+
+    def get_beefy_token_interest_label(self, token):
+        if token == "rcowwmaticldo":
+            return "Beefy APY"
+        return "Beefy APR"
 
     def get_beefy_vault_apy(self, token):
         if token == "moowstethweth":
@@ -116,6 +141,54 @@ def test_token_balance_uses_beefy_value_and_apy():
         str(token_balance)
         == "moowstethweth @ optimism: 7 = 123.456 usdc (Beefy APY: 0.33%)"
     )
+
+
+def test_token_balance_uses_beefy_price_for_supported_tokens():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("ethereum", True),
+        "beqi",
+        "0xwallet",
+    )
+
+    assert token_balance.value == Decimal("8.75")
+    assert token_balance.interest_apr is None
+    assert str(token_balance) == "beqi @ ethereum: 7 = 8.75 usdc"
+
+
+def test_token_balance_uses_beefy_price_and_apr_for_reward_pool_token():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("ethereum", True),
+        "rbeqi",
+        "0xwallet",
+    )
+
+    assert token_balance.value == Decimal("8.75")
+    assert token_balance.interest_apr == ("Beefy APR", Decimal("22.237282073794604"))
+    assert str(token_balance) == "rbeqi @ ethereum: 7 = 8.75 usdc (Beefy APR: 22.24%)"
+
+
+def test_token_balance_hides_apr_and_prints_clean_zero():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("optimism", True),
+        "moowstethweth",
+        "0xwallet",
+    )
+    token_balance.balance = Decimal("0")
+    token_balance.value = Decimal("0E-30")
+
+    assert str(token_balance) == "moowstethweth @ optimism: 0 = 0 usdc"
+
+
+def test_token_balance_uses_beefy_price_for_reward_pool_position_token():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("polygon", True),
+        "rcowwmaticldo",
+        "0xwallet",
+    )
+
+    assert token_balance.value == Decimal("42")
+    assert token_balance.interest_apr == ("Beefy APY", Decimal("25.771911991263097"))
+    assert str(token_balance) == "rcowwmaticldo @ polygon: 7 = 42 usdc (Beefy APY: 25.77%)"
 
 
 def test_sort_balances_orders_by_value_descending():

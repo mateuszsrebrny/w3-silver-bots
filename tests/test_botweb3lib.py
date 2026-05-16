@@ -46,9 +46,37 @@ def sample_config():
                             "beefy_vault_id": "test-vault",
                             "beefy_oracle_id": "test-oracle",
                         },
+                        "rcowwmaticldo": {
+                            "address": "0x3333333333333333333333333333333333333333",
+                            "decimals": "ether",
+                            "beefy_price_oracle_id": "uniswap-cow-poly-wmatic-ldo",
+                            "beefy_apr_breakdown_id": "uniswap-cow-poly-wmatic-ldo-rp",
+                            "beefy_apr_field": "totalApy",
+                            "beefy_interest_label": "Beefy APY",
+                        },
                     }
                 },
-            }
+            },
+            "ethereum": {
+                "rpc_url": "https://ethereum.example",
+                "chain_id": 1,
+                "contracts": {
+                    "erc20": {
+                        "beqi": {
+                            "address": "0x6c9D885B37b131aa68794ee1549fFB80be381Fa9",
+                            "decimals": "ether",
+                            "beefy_price_oracle_id": "beQIv2",
+                        },
+                        "rbeqi": {
+                            "address": "0x5e3e4ed40e754254095f091aa51871d125f4380a",
+                            "decimals": "ether",
+                            "beefy_price_oracle_id": "beQIv2",
+                            "beefy_apr_breakdown_id": "beefy-beqi-earnings",
+                            "beefy_apr_field": "vaultApr",
+                        }
+                    }
+                },
+            },
         }
     }
 
@@ -318,3 +346,101 @@ def test_beefy_vault_value_and_apy(monkeypatch, sample_config):
     assert blockchain_access.is_beefy_vault_token("moousdc") is True
     assert blockchain_access.get_beefy_vault_value("moousdc", Decimal("3")) == Decimal("8.25")
     assert blockchain_access.get_beefy_vault_apy("moousdc") == Decimal("12.3400")
+
+
+def test_beefy_priced_token_value(monkeypatch, sample_config):
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, timeout):
+        assert timeout == 20
+        assert url == "https://api.beefy.finance/prices"
+        return FakeResponse({"beQIv2": 1.25})
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("ethereum")
+
+    assert blockchain_access.is_beefy_priced_token("beqi") is True
+    assert blockchain_access.get_beefy_token_value("beqi", Decimal("4")) == Decimal("5.0")
+
+
+def test_beefy_priced_token_value_falls_back_to_lps(monkeypatch, sample_config):
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, timeout):
+        assert timeout == 20
+        if url == "https://api.beefy.finance/prices":
+            return FakeResponse({"beQI": 1.25})
+        if url == "https://api.beefy.finance/lps":
+            return FakeResponse({"uniswap-cow-poly-wmatic-ldo": 6})
+        raise AssertionError(url)
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+
+    assert blockchain_access.is_beefy_priced_token("rcowwmaticldo") is True
+    assert blockchain_access.get_beefy_token_value("rcowwmaticldo", Decimal("7")) == Decimal("42")
+
+
+def test_beefy_priced_token_apr(monkeypatch, sample_config):
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, timeout):
+        assert timeout == 20
+        assert url == "https://api.beefy.finance/apy/breakdown"
+        return FakeResponse({"beefy-beqi-earnings": {"vaultApr": 0.22237282073794604}})
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("ethereum")
+
+    assert blockchain_access.get_beefy_token_apr("rbeqi") == Decimal("22.23728207379460400")
+
+
+def test_beefy_priced_token_apy_and_label(monkeypatch, sample_config):
+    class FakeResponse:
+        def __init__(self, payload):
+            self.payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self.payload
+
+    def fake_get(url, timeout):
+        assert timeout == 20
+        assert url == "https://api.beefy.finance/apy/breakdown"
+        return FakeResponse({"uniswap-cow-poly-wmatic-ldo-rp": {"totalApy": 0.25771911991263097}})
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+
+    assert blockchain_access.get_beefy_token_apr("rcowwmaticldo") == Decimal("25.77191199126309700")
+    assert blockchain_access.get_beefy_token_interest_label("rcowwmaticldo") == "Beefy APY"

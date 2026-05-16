@@ -125,6 +125,14 @@ class BlockchainAccess:
     def is_beefy_vault_token(self, token):
         return "beefy_vault_id" in self.get_token_config(token)
 
+    def is_beefy_priced_token(self, token):
+        token_info = self.get_token_config(token)
+        return "beefy_price_oracle_id" in token_info
+
+    def has_beefy_token_apr(self, token):
+        token_info = self.get_token_config(token)
+        return "beefy_apr_breakdown_id" in token_info
+
     def get_all_tokens(self):
         return self.get_config()["contracts"]["erc20"].keys()
 
@@ -324,6 +332,43 @@ class BlockchainAccess:
         if total_apy is None:
             return None
         return Decimal(str(total_apy)) * Decimal("100")
+
+    def get_beefy_price_usd(self, token):
+        oracle_id = self.get_token_config(token)["beefy_price_oracle_id"]
+        prices = self._get_beefy_json("prices")
+        if oracle_id in prices:
+            return Decimal(str(prices[oracle_id]))
+
+        lps = self._get_beefy_json("lps")
+        if oracle_id in lps:
+            return Decimal(str(lps[oracle_id]))
+
+        raise KeyError(oracle_id)
+
+    def get_beefy_token_value(self, token, balance):
+        return Decimal(str(balance)) * self.get_beefy_price_usd(token)
+
+    def get_beefy_token_apr(self, token):
+        token_info = self.get_token_config(token)
+        breakdown_id = token_info.get("beefy_apr_breakdown_id")
+        if breakdown_id is None:
+            return None
+
+        apy_breakdown = self._get_beefy_json("apy/breakdown")
+        breakdown = apy_breakdown.get(breakdown_id)
+        if breakdown is None:
+            return None
+
+        field = token_info.get("beefy_apr_field", "totalApy")
+        apr = breakdown.get(field)
+        if apr is None:
+            return None
+
+        return Decimal(str(apr)) * Decimal("100")
+
+    def get_beefy_token_interest_label(self, token):
+        token_info = self.get_token_config(token)
+        return token_info.get("beefy_interest_label", "Beefy APR")
 
     @classmethod
     def _load_abi_result(cls, abi_path):

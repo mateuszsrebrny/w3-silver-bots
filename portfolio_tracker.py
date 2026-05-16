@@ -9,9 +9,9 @@ DEFAULT_CHAINS = ["polygon", "optimism", "ethereum", "arbitrum"]
 DEFAULT_VALUE_TOKEN = "usdc"
 
 TRACKED_TOKENS = {
-    "polygon": ["pol", "aave", "link", "ghst", "bal"],
+    "polygon": ["pol", "rcowwmaticldo", "aave", "link", "ghst", "bal"],
     "optimism": ["aop", "moowstethweth", "eth", "velo"],
-    "ethereum": ["adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
+    "ethereum": ["rbeqi", "adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtau"],
     "arbitrum": ["adai", "aarb", "eth", "dai", "wbtc"],
 }
 
@@ -50,6 +50,9 @@ class TokenBalance:
         is_beefy_vault_token = getattr(self._blockchain_access, "is_beefy_vault_token", None)
         if is_beefy_vault_token is not None and is_beefy_vault_token(self.token_name):
             return self._blockchain_access.get_beefy_vault_value(self.token_name, self.balance)
+        is_beefy_priced_token = getattr(self._blockchain_access, "is_beefy_priced_token", None)
+        if is_beefy_priced_token is not None and is_beefy_priced_token(self.token_name):
+            return self._blockchain_access.get_beefy_token_value(self.token_name, self.balance)
         return self._blockchain_access.check_kyberswap_price(
             [self.token_name, self.value_token],
             self.balance,
@@ -70,6 +73,28 @@ class TokenBalance:
             except Exception:
                 return None
 
+        get_beefy_token_apr = getattr(self._blockchain_access, "get_beefy_token_apr", None)
+        get_beefy_token_interest_label = getattr(
+            self._blockchain_access,
+            "get_beefy_token_interest_label",
+            None,
+        )
+        is_beefy_priced_token = getattr(self._blockchain_access, "is_beefy_priced_token", None)
+        if (
+            get_beefy_token_apr is not None
+            and is_beefy_priced_token is not None
+            and is_beefy_priced_token(self.token_name)
+        ):
+            try:
+                apr = get_beefy_token_apr(self.token_name)
+                if apr is not None:
+                    label = "Beefy APR"
+                    if get_beefy_token_interest_label is not None:
+                        label = get_beefy_token_interest_label(self.token_name)
+                    return (label, apr)
+            except Exception:
+                return None
+
         get_aave_supply_apr = getattr(self._blockchain_access, "get_aave_supply_apr", None)
         if get_aave_supply_apr is None:
             return None
@@ -83,16 +108,22 @@ class TokenBalance:
             return None
 
     def _interest_suffix(self):
-        if self.interest_apr is None:
+        if self.interest_apr is None or Decimal(str(self.balance)) == 0:
             return ""
         label, value = self.interest_apr
         return f" ({label}: {value.quantize(Decimal('0.01'))}%)"
+
+    def _display_value(self):
+        value = Decimal(str(self.value))
+        if value == 0:
+            return "0"
+        return str(value.normalize()) if value == value.normalize() else str(value)
 
     def __str__(self):
         wallet_part = f" [{self.wallet_label}]" if self.wallet_label else ""
         return (
             f"{self.token_name} @ {self._blockchain_access.get_chain()}{wallet_part}: "
-            f"{self.balance} = {self.value} {self.value_token}{self._interest_suffix()}"
+            f"{self.balance} = {self._display_value()} {self.value_token}{self._interest_suffix()}"
         )
 
     def __lt__(self, other):

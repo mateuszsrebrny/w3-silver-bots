@@ -47,6 +47,17 @@ networks:
         usdc:
           address: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174"
           decimals: "mwei"
+        cowwmaticldo:
+          address: "0x7f14AAEb965028Ea56c10a1B758fB61BC90Cd770"
+          decimals: "ether"
+          beefy_price_oracle_id: "uniswap-cow-poly-wmatic-ldo"
+        rcowwmaticldo:
+          address: "0xaf6ef2222bf16bc7ca86c3a04f7d427c5efee7c3"
+          decimals: "ether"
+          beefy_price_oracle_id: "uniswap-cow-poly-wmatic-ldo"
+          beefy_apr_breakdown_id: "uniswap-cow-poly-wmatic-ldo-rp"
+          beefy_apr_field: "totalApy"
+          beefy_interest_label: "Beefy APY"
         bal:
           address: "0x9a71012B13CA4d3D0Cdc72A177DF3ef03b0E76A3"
           decimals: "ether"
@@ -118,6 +129,16 @@ networks:
         usdc:
           address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
           decimals: "mwei"
+        beqi:
+          address: "0x6c9D885B37b131aa68794ee1549fFB80be381Fa9"
+          decimals: "ether"
+          beefy_price_oracle_id: "beQIv2"
+        rbeqi:
+          address: "0x5e3e4ed40e754254095f091aa51871d125f4380a"
+          decimals: "ether"
+          beefy_price_oracle_id: "beQIv2"
+          beefy_apr_breakdown_id: "beefy-beqi-earnings"
+          beefy_apr_field: "vaultApr"
         wbtc:
           address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
           decimals: "lovelace"
