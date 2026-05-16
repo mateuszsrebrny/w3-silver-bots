@@ -8,6 +8,23 @@ def quantize_money(value):
 
 
 def result_to_row(result):
+    if hasattr(result, "pair_name"):
+        return {
+            "strategy": result.strategy_name,
+            "strategy_label": result.strategy_label,
+            "pair": result.pair_name,
+            "symbol": result.symbol,
+            "contribution_interval": result.contribution_interval,
+            "start": result.start_timestamp.date().isoformat(),
+            "end": result.end_timestamp.date().isoformat(),
+            "initial_value_usd": str(quantize_money(result.initial_value)),
+            "ending_value_usd": str(quantize_money(result.ending_value)),
+            "return_pct": str(quantize_money(result.total_return_pct)),
+            "max_drawdown_pct": str(quantize_money(result.max_drawdown_pct)),
+            "fee_yield_pct": str(quantize_money(result.fee_yield_pct)),
+            "yield_mode": result.yield_mode,
+        }
+
     if hasattr(result, "gross_buys_dai"):
         return {
             "strategy": result.strategy_name,

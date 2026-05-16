@@ -1,0 +1,20 @@
+{
+  "data_root": "data/market/coinbase",
+  "generated_at_utc": "2026-05-16T07:51:22Z",
+  "initial_value": "10000",
+  "pair_yields_pct": {
+    "usdt-weth": "45",
+    "wbtc-weth": "26"
+  },
+  "pairs": [
+    "wbtc-weth",
+    "usdt-weth"
+  ],
+  "since_dates": [
+    "2020-01-01",
+    "2021-01-01",
+    "2022-01-01",
+    "2023-01-01"
+  ],
+  "yield_mode": "apr"
+}
