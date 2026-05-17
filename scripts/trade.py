@@ -29,6 +29,7 @@ DEFAULT_SLIPPAGE_BPS = 50
 DEFAULT_DEADLINE_SECONDS = 20 * 60
 DEFAULT_APPROVAL_GAS_LIMIT = 65000
 DEFAULT_SWAP_GAS_LIMIT = 900000
+ROUTE_GAS_LIMIT_MULTIPLIER = 4
 DEFAULT_RECEIPT_TIMEOUT_SECONDS = 180
 DEFAULT_RECEIPT_DIR = "reports/trades"
 
@@ -202,6 +203,16 @@ def build_swap_tx(blockchain_access, sender, encoded_swap):
     return tx
 
 
+def apply_route_gas_floor(tx, route):
+    route_gas = route.route_summary.get("gas")
+    if route_gas is None:
+        return tx
+
+    route_gas_limit = int(route_gas)
+    tx["gas"] = max(int(tx["gas"]), route_gas_limit * ROUTE_GAS_LIMIT_MULTIPLIER)
+    return tx
+
+
 def _safe_estimate_gas(w3, tx, fallback_gas_limit):
     return BlockchainAccess.estimate_gas(w3, tx, fallback_gas_limit)
 
@@ -232,6 +243,51 @@ def wait_for_receipt(blockchain_access, tx_hash, timeout_seconds):
         tx_hash,
         timeout=timeout_seconds,
     )
+
+
+def diagnose_failed_swap(blockchain_access, tx, receipt=None):
+    w3 = blockchain_access.get_w3()
+    block_identifier = "latest"
+    if receipt is not None and receipt.get("blockNumber") is not None:
+        block_identifier = int(receipt["blockNumber"])
+
+    payload = {
+        "from": tx["from"],
+        "to": tx["to"],
+        "data": tx["data"],
+        "value": tx.get("value", 0),
+        "gas": int(tx["gas"]),
+    }
+    diagnostic = {
+        "block_identifier": block_identifier,
+        "same_gas_limit": int(tx["gas"]),
+    }
+
+    try:
+        w3.eth.call(payload, block_identifier=block_identifier)
+        diagnostic["same_gas_error"] = None
+    except Exception as exc:
+        diagnostic["same_gas_error"] = str(exc)
+
+    higher_gas_limit = max(int(tx["gas"]) * 2, 1_500_000)
+    payload["gas"] = higher_gas_limit
+    diagnostic["higher_gas_limit"] = higher_gas_limit
+    try:
+        w3.eth.call(payload, block_identifier=block_identifier)
+        diagnostic["higher_gas_success"] = True
+        diagnostic["higher_gas_error"] = None
+    except Exception as exc:
+        diagnostic["higher_gas_success"] = False
+        diagnostic["higher_gas_error"] = str(exc)
+
+    if diagnostic["same_gas_error"] and diagnostic["higher_gas_success"]:
+        diagnostic["summary"] = "Likely gas limit too low for this route."
+    elif diagnostic["same_gas_error"] is not None:
+        diagnostic["summary"] = diagnostic["same_gas_error"]
+    else:
+        diagnostic["summary"] = "eth_call did not reproduce the failure."
+
+    return diagnostic
 
 
 def save_trade_receipt(
@@ -370,7 +426,9 @@ def main():
         approval_gas = assess_gas_cost(blockchain_access, approval_tx["gas"], eth_usd_price=eth_usd_price)
 
     preview_swap_tx = build_swap_tx(blockchain_access, wallet, encoded_swap)
-    swap_gas = assess_gas_cost(blockchain_access, preview_swap_tx["gas"], eth_usd_price=eth_usd_price)
+    preview_swap_gas_limit = int(preview_swap_tx["gas"])
+    preview_swap_tx = apply_route_gas_floor(preview_swap_tx, route)
+    swap_gas = assess_gas_cost(blockchain_access, preview_swap_gas_limit, eth_usd_price=eth_usd_price)
 
     print_preview(
         args=args,
@@ -402,8 +460,19 @@ def main():
         )
         if int(approval_receipt["status"]) != 1:
             raise RuntimeError(f"Approval transaction failed: {approval_hash}")
+        route = fetch_route(blockchain_access, args.from_token, args.to_token, input_amount, wallet)
+        encoded_swap = build_encoded_swap(
+            blockchain_access,
+            route,
+            wallet,
+            args.slippage_bps,
+            args.deadline_seconds,
+        )
+        amount_out_wei = int(route.route_summary["amountOut"])
+        expected_amount_out = from_token_wei(blockchain_access, args.to_token, amount_out_wei)
 
     swap_tx = build_swap_tx(blockchain_access, wallet, encoded_swap)
+    swap_tx = apply_route_gas_floor(swap_tx, route)
     swap_hash = sign_and_send(blockchain_access, swap_tx, private_key)
     print(f"Swap tx sent: {swap_hash}")
     swap_receipt = wait_for_receipt(
@@ -411,6 +480,13 @@ def main():
         swap_hash,
         timeout_seconds=args.receipt_timeout_seconds,
     )
+    failed_swap_diagnostic = None
+    if int(swap_receipt["status"]) != 1:
+        failed_swap_diagnostic = diagnose_failed_swap(
+            blockchain_access,
+            swap_tx,
+            receipt=swap_receipt,
+        )
     metadata = {
         "chain": args.chain,
         "wallet": wallet,
@@ -437,6 +513,8 @@ def main():
         metadata["preview_approval_gas_price_wei"] = str(approval_gas.gas_price_wei)
     if approval_receipt is not None:
         metadata["approval_receipt_status"] = int(approval_receipt["status"])
+    if failed_swap_diagnostic is not None:
+        metadata["failed_swap_diagnostic"] = failed_swap_diagnostic
     receipt_path = save_trade_receipt(
         args.receipt_dir,
         args.chain,
@@ -449,6 +527,17 @@ def main():
     print(f"Receipt saved: {receipt_path}")
     print(f"Receipt status: {swap_receipt['status']}")
     if int(swap_receipt["status"]) != 1:
+        print(f"Failure diagnostic: {failed_swap_diagnostic['summary']}")
+        if failed_swap_diagnostic["same_gas_error"] is not None:
+            print(f"Call with gas={failed_swap_diagnostic['same_gas_limit']}: {failed_swap_diagnostic['same_gas_error']}")
+        if failed_swap_diagnostic["higher_gas_success"]:
+            print(
+                f"Call with gas={failed_swap_diagnostic['higher_gas_limit']}: ok"
+            )
+        elif failed_swap_diagnostic["higher_gas_error"] is not None:
+            print(
+                f"Call with gas={failed_swap_diagnostic['higher_gas_limit']}: {failed_swap_diagnostic['higher_gas_error']}"
+            )
         raise RuntimeError(f"Swap transaction failed: {swap_hash}")
 
 

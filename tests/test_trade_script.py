@@ -432,23 +432,27 @@ def test_main_execute_rebuilds_swap_after_approval(monkeypatch, capsys):
     monkeypatch.setattr(trade, "BlockchainAccess", FakeBlockchainAccess)
     monkeypatch.setattr(trade, "load_private_key", lambda: "0x" + "11" * 32)
     monkeypatch.setattr(trade, "wallet_from_private_key", lambda private_key: "0xwallet")
-    monkeypatch.setattr(
-        trade,
-        "fetch_route",
-        lambda blockchain_access, from_token, to_token, amount, wallet: trade.SwapRoute(
+    route_calls = []
+
+    def fake_fetch_route(blockchain_access, from_token, to_token, amount, wallet):
+        route_calls.append((from_token, to_token, amount, wallet))
+        return trade.SwapRoute(
             router_address="0xrouter",
             route_summary={"amountOut": str(2 * 10**17), "gas": "123456"},
-        ),
-    )
-    monkeypatch.setattr(
-        trade,
-        "build_encoded_swap",
-        lambda blockchain_access, route, wallet, slippage_bps, deadline_seconds: trade.EncodedSwap(
+        )
+
+    encoded_calls = []
+
+    def fake_build_encoded_swap(blockchain_access, route, wallet, slippage_bps, deadline_seconds):
+        encoded_calls.append((route.router_address, wallet, slippage_bps, deadline_seconds))
+        return trade.EncodedSwap(
             router_address="0xrouter",
             calldata="0xdead",
             value_wei=0,
-        ),
-    )
+        )
+
+    monkeypatch.setattr(trade, "fetch_route", fake_fetch_route)
+    monkeypatch.setattr(trade, "build_encoded_swap", fake_build_encoded_swap)
     monkeypatch.setattr(trade, "build_approval_tx", lambda *args, **kwargs: {"gas": 50000, "nonce": 0})
 
     built_swap_txs = [{"gas": 120000, "nonce": 0}, {"gas": 120000, "nonce": 1}]
@@ -495,7 +499,18 @@ def test_main_execute_rebuilds_swap_after_approval(monkeypatch, capsys):
     output = capsys.readouterr().out
     assert "Approval tx sent: 0x1" in output
     assert "Swap tx sent: 0x2" in output
-    assert sent_txs == [{"gas": 50000, "nonce": 0}, {"gas": 120000, "nonce": 1}]
+    assert sent_txs == [{"gas": 50000, "nonce": 0}, {"gas": 493824, "nonce": 1}]
+    assert len(route_calls) == 2
+    assert len(encoded_calls) == 2
+
+
+def test_apply_route_gas_floor_uses_route_estimate_multiplier():
+    tx = {"gas": 900000}
+    route = trade.SwapRoute(router_address="0xrouter", route_summary={"gas": "647976"})
+
+    updated = trade.apply_route_gas_floor(tx, route)
+
+    assert updated["gas"] == 2591904
 
 
 def test_main_execute_saves_trade_receipt(monkeypatch, tmp_path, capsys):
@@ -769,6 +784,18 @@ def test_main_execute_raises_on_failed_swap_receipt(monkeypatch, tmp_path, capsy
         "wait_for_receipt",
         lambda blockchain_access, tx_hash, timeout_seconds: {"status": 0, "transactionHash": tx_hash},
     )
+    monkeypatch.setattr(
+        trade,
+        "diagnose_failed_swap",
+        lambda blockchain_access, tx, receipt=None: {
+            "summary": "Likely gas limit too low for this route.",
+            "same_gas_limit": 120000,
+            "same_gas_error": "execution reverted: Call failed",
+            "higher_gas_limit": 1500000,
+            "higher_gas_success": True,
+            "higher_gas_error": None,
+        },
+    )
     monkeypatch.setattr(trade, "maybe_confirm", lambda args: None)
     monkeypatch.setattr(
         trade,
@@ -798,3 +825,8 @@ def test_main_execute_raises_on_failed_swap_receipt(monkeypatch, tmp_path, capsy
 
     with pytest.raises(RuntimeError, match="Swap transaction failed"):
         trade.main()
+
+    output = capsys.readouterr().out
+    assert "Failure diagnostic: Likely gas limit too low for this route." in output
+    assert "Call with gas=120000: execution reverted: Call failed" in output
+    assert "Call with gas=1500000: ok" in output
