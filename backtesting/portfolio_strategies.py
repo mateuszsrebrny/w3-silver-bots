@@ -508,6 +508,117 @@ class BudgetedDrawdownTiltRebalance:
         )
 
 
+class BudgetedEthBtcTrendFilteredDrawdownTilt(BudgetedDrawdownTiltRebalance):
+    name = "budgeted_ethbtc_trend_filtered_drawdown_tilt"
+
+    def __init__(
+        self,
+        drawdown_window_days=365,
+        deep_drawdown="0.50",
+        medium_drawdown="0.25",
+        deep_bear_cash_weight="0.05",
+        bear_cash_weight="0.15",
+        neutral_cash_weight="0.25",
+        bull_cash_weight="0.40",
+        rebalance_fraction="0.45",
+        max_asset_tilt="0.20",
+        deep_buy_budget_fraction="1.00",
+        medium_buy_budget_fraction="0.80",
+        neutral_buy_budget_fraction="0.45",
+        bull_sell_budget_fraction="0.30",
+        neutral_sell_budget_fraction="0.15",
+        eth_btc_ma_window_days=200,
+    ):
+        super().__init__(
+            drawdown_window_days=drawdown_window_days,
+            deep_drawdown=deep_drawdown,
+            medium_drawdown=medium_drawdown,
+            deep_bear_cash_weight=deep_bear_cash_weight,
+            bear_cash_weight=bear_cash_weight,
+            neutral_cash_weight=neutral_cash_weight,
+            bull_cash_weight=bull_cash_weight,
+            rebalance_fraction=rebalance_fraction,
+            max_asset_tilt=max_asset_tilt,
+            deep_buy_budget_fraction=deep_buy_budget_fraction,
+            medium_buy_budget_fraction=medium_buy_budget_fraction,
+            neutral_buy_budget_fraction=neutral_buy_budget_fraction,
+            bull_sell_budget_fraction=bull_sell_budget_fraction,
+            neutral_sell_budget_fraction=neutral_sell_budget_fraction,
+        )
+        self.eth_btc_ma_window_days = eth_btc_ma_window_days
+
+    def decide(self, timestamp, bundle, state):
+        btc = _asset_signal(bundle, "BTC-USD", timestamp, 200, self.drawdown_window_days)
+        eth = _asset_signal(bundle, "ETH-USD", timestamp, 200, self.drawdown_window_days)
+
+        if btc is None or eth is None:
+            return BudgetedStatic50_50Rebalance().decide(timestamp, bundle, state)
+
+        deepest_drawdown = max(btc["drawdown"], eth["drawdown"])
+        if deepest_drawdown >= self.deep_drawdown:
+            cash_weight = self.deep_bear_cash_weight
+            reason = "deep_drawdown"
+            buy_budget_fraction = self.deep_buy_budget_fraction
+            sell_budget_fraction = ZERO
+        elif deepest_drawdown >= self.medium_drawdown:
+            cash_weight = self.bear_cash_weight
+            reason = "medium_drawdown"
+            buy_budget_fraction = self.medium_buy_budget_fraction
+            sell_budget_fraction = ZERO
+        elif btc["expensive"] and eth["expensive"]:
+            cash_weight = self.bull_cash_weight
+            reason = "both_assets_expensive"
+            buy_budget_fraction = ZERO
+            sell_budget_fraction = self.bull_sell_budget_fraction
+        else:
+            cash_weight = self.neutral_cash_weight
+            reason = "neutral_drawdown"
+            buy_budget_fraction = self.neutral_buy_budget_fraction
+            sell_budget_fraction = self.neutral_sell_budget_fraction
+
+        tilt = _drawdown_tilt(btc["drawdown"], eth["drawdown"], self.max_asset_tilt)
+        btc_risk_share = HALF
+        eth_btc_signal = _eth_btc_trend_signal(bundle, timestamp, self.eth_btc_ma_window_days)
+        eth_btc_strong = eth_btc_signal is not None and eth_btc_signal["ratio"] >= eth_btc_signal["moving_average"]
+        if btc["drawdown"] > eth["drawdown"]:
+            btc_risk_share += tilt
+            reason += "_btc_tilt"
+        elif eth["drawdown"] > btc["drawdown"]:
+            if eth_btc_strong:
+                btc_risk_share -= tilt
+                reason += "_eth_tilt_ethbtc_confirmed"
+            else:
+                reason += "_eth_tilt_blocked_by_ethbtc_trend"
+
+        base = _manual_weights(
+            cash_weight=cash_weight,
+            btc_risk_share=btc_risk_share,
+            rebalance_fraction=self.rebalance_fraction,
+            reason=reason,
+        )
+        risk_weight = ONE - cash_weight
+        buy_weights = {
+            "BTC-USD": base.target_weights["BTC-USD"] / risk_weight if risk_weight > 0 else HALF,
+            "ETH-USD": base.target_weights["ETH-USD"] / risk_weight if risk_weight > 0 else HALF,
+        }
+        return BudgetedTargetAllocationDecision(
+            target_weights=base.target_weights,
+            rebalance_fraction=base.rebalance_fraction,
+            reason=base.reason,
+            buy_budget_fraction=buy_budget_fraction,
+            sell_budget_fraction=sell_budget_fraction,
+            buy_weights=buy_weights,
+            sell_weights={"BTC-USD": HALF, "ETH-USD": HALF},
+        )
+
+    def label(self):
+        return (
+            f"{self.name}(drawdown_window_days={self.drawdown_window_days},"
+            f"eth_btc_ma_window_days={self.eth_btc_ma_window_days},"
+            f"deep_buy_budget_fraction={self.deep_buy_budget_fraction})"
+        )
+
+
 class BudgetedBTCDefensiveETHAggressive:
     name = "budgeted_btc_defensive_eth_aggressive"
 
@@ -680,3 +791,33 @@ def _drawdown_tilt(btc_drawdown, eth_drawdown, max_asset_tilt):
     drawdown_gap = abs(btc_drawdown - eth_drawdown)
     scaled_tilt = min(max_asset_tilt, drawdown_gap / Decimal("2"))
     return scaled_tilt
+
+
+def _eth_btc_trend_signal(bundle, timestamp, window_days):
+    timestamps = [
+        candidate
+        for candidate in bundle.common_timestamps_since(_timestamp_epoch_floor(timestamp))
+        if candidate <= timestamp
+    ]
+    if len(timestamps) < window_days:
+        return None
+
+    window = timestamps[-window_days:]
+    ratios = []
+    for candidate in window:
+        btc_close = bundle.close("BTC-USD", candidate)
+        eth_close = bundle.close("ETH-USD", candidate)
+        if btc_close is None or eth_close is None or btc_close == ZERO:
+            return None
+        ratios.append(eth_close / btc_close)
+
+    current_ratio = ratios[-1]
+    moving_average = sum(ratios) / Decimal(len(ratios))
+    return {
+        "ratio": current_ratio,
+        "moving_average": moving_average,
+    }
+
+
+def _timestamp_epoch_floor(timestamp):
+    return timestamp.replace(year=1970, month=1, day=1)

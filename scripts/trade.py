@@ -62,6 +62,14 @@ class QuoteValuation:
     quote_discount_bps: Decimal | None
 
 
+class KyberRequestError(RuntimeError):
+    pass
+
+
+class TradePreflightError(RuntimeError):
+    pass
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Execute an Arbitrum swap with a local wallet.")
     parser.add_argument("--chain", default=DEFAULT_CHAIN, choices=["arbitrum"])
@@ -120,8 +128,33 @@ def from_token_wei(blockchain_access, token, amount_wei):
     return BlockchainAccess.my_fromWei(amount_wei, blockchain_access.get_decimals(token))
 
 
+def assert_sufficient_input_balance(blockchain_access, token, wallet, amount):
+    balance = blockchain_access.check_balance_token(token, wallet)
+    if balance < amount:
+        raise TradePreflightError(
+            f"Insufficient {token} balance for swap: have {balance}, need {amount}. "
+            "Withdraw from Aave or reduce --amount."
+        )
+    return balance
+
+
 def kyber_headers():
     return {"x-client-id": CLIENT_ID}
+
+
+def raise_for_kyber_status(response, action, context):
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        body = response.text
+        try:
+            body = json.dumps(response.json(), sort_keys=True)
+        except ValueError:
+            pass
+        details = ", ".join(f"{key}={value}" for key, value in context.items())
+        raise KyberRequestError(
+            f"Kyber {action} failed: {exc}. Context: {details}. Response body: {body}"
+        ) from exc
 
 
 def fetch_route(blockchain_access, from_token, to_token, amount, wallet):
@@ -138,7 +171,17 @@ def fetch_route(blockchain_access, from_token, to_token, amount, wallet):
         headers=kyber_headers(),
         timeout=20,
     )
-    response.raise_for_status()
+    raise_for_kyber_status(
+        response,
+        "route quote",
+        {
+            "chain": blockchain_access.get_kyberswap_chain_name(),
+            "from_token": from_token,
+            "to_token": to_token,
+            "amount": amount,
+            "wallet": wallet,
+        },
+    )
     payload = response.json()
     data = payload["data"]
     return SwapRoute(router_address=data["routerAddress"], route_summary=data["routeSummary"])
@@ -159,7 +202,19 @@ def build_encoded_swap(blockchain_access, route, wallet, slippage_bps, deadline_
         data=json.dumps(body),
         timeout=20,
     )
-    response.raise_for_status()
+    raise_for_kyber_status(
+        response,
+        "route build",
+        {
+            "chain": blockchain_access.get_kyberswap_chain_name(),
+            "router": route.router_address,
+            "wallet": wallet,
+            "slippage_bps": slippage_bps,
+            "route_gas": route.route_summary.get("gas"),
+            "amount_in": route.route_summary.get("amountIn"),
+            "amount_out": route.route_summary.get("amountOut"),
+        },
+    )
     payload = response.json()
     data = payload["data"]
     calldata = data.get("data")
@@ -167,6 +222,24 @@ def build_encoded_swap(blockchain_access, route, wallet, slippage_bps, deadline_
         raise ValueError("Kyber route/build response did not include calldata")
     value_wei = int(data.get("value", "0"))
     return EncodedSwap(router_address=route.router_address, calldata=calldata, value_wei=value_wei)
+
+
+def refresh_swap_route(blockchain_access, args, input_amount, wallet, fallback_route, fallback_encoded_swap):
+    try:
+        refreshed_route = fetch_route(blockchain_access, args.from_token, args.to_token, input_amount, wallet)
+        refreshed_encoded_swap = build_encoded_swap(
+            blockchain_access,
+            refreshed_route,
+            wallet,
+            args.slippage_bps,
+            args.deadline_seconds,
+        )
+        print("Refreshed Kyber route before swap.")
+        return refreshed_route, refreshed_encoded_swap
+    except KyberRequestError as exc:
+        print(f"Warning: could not refresh Kyber route before swap: {exc}")
+        print("Using the previously previewed route.")
+        return fallback_route, fallback_encoded_swap
 
 
 def build_approval_tx(blockchain_access, token, owner, spender, amount_wei):
@@ -238,6 +311,31 @@ def sign_and_send(blockchain_access, tx, private_key):
     return tx_hash.hex()
 
 
+def preflight_swap_tx(blockchain_access, tx):
+    payload = {
+        "from": tx["from"],
+        "to": tx["to"],
+        "data": tx["data"],
+        "value": tx.get("value", 0),
+        "gas": int(tx["gas"]),
+    }
+    try:
+        blockchain_access.get_w3().eth.call(payload, block_identifier="latest")
+    except Exception as exc:
+        message = str(exc)
+        if "Return amount is not enough" in message:
+            raise TradePreflightError(
+                "Swap preflight failed: Kyber route would return less than the minimum amount. "
+                "Refresh/retry later, increase --slippage-bps, or split into a smaller trade."
+            ) from exc
+        if "TRANSFER_FROM_FAILED" in message:
+            raise TradePreflightError(
+                "Swap preflight failed: router could not transfer the input token from the wallet. "
+                "Check token balance and allowance."
+            ) from exc
+        raise TradePreflightError(f"Swap preflight failed: {message}") from exc
+
+
 def wait_for_receipt(blockchain_access, tx_hash, timeout_seconds):
     return blockchain_access.get_w3().eth.wait_for_transaction_receipt(
         tx_hash,
@@ -286,6 +384,12 @@ def diagnose_failed_swap(blockchain_access, tx, receipt=None):
         diagnostic["summary"] = diagnostic["same_gas_error"]
     else:
         diagnostic["summary"] = "eth_call did not reproduce the failure."
+
+    if "Return amount is not enough" in str(diagnostic["same_gas_error"]):
+        diagnostic["summary"] = (
+            "Route output fell below Kyber minimum return. "
+            "This is usually slippage or a stale route, not gas."
+        )
 
     return diagnostic
 
@@ -388,6 +492,7 @@ def main():
     wallet = wallet_from_private_key(private_key)
 
     input_amount = Decimal(str(args.amount))
+    input_balance = assert_sufficient_input_balance(blockchain_access, args.from_token, wallet, input_amount)
     route = fetch_route(blockchain_access, args.from_token, args.to_token, input_amount, wallet)
     encoded_swap = build_encoded_swap(
         blockchain_access,
@@ -441,6 +546,7 @@ def main():
         swap_gas=swap_gas,
         quote_value=quote_value,
     )
+    print(f"Input balance: {input_balance} {args.from_token}")
 
     if not args.execute:
         print("Preview only. Use --execute to actually send the trade.")
@@ -460,19 +566,21 @@ def main():
         )
         if int(approval_receipt["status"]) != 1:
             raise RuntimeError(f"Approval transaction failed: {approval_hash}")
-        route = fetch_route(blockchain_access, args.from_token, args.to_token, input_amount, wallet)
-        encoded_swap = build_encoded_swap(
-            blockchain_access,
-            route,
-            wallet,
-            args.slippage_bps,
-            args.deadline_seconds,
-        )
-        amount_out_wei = int(route.route_summary["amountOut"])
-        expected_amount_out = from_token_wei(blockchain_access, args.to_token, amount_out_wei)
+
+    route, encoded_swap = refresh_swap_route(
+        blockchain_access,
+        args,
+        input_amount,
+        wallet,
+        route,
+        encoded_swap,
+    )
+    amount_out_wei = int(route.route_summary["amountOut"])
+    expected_amount_out = from_token_wei(blockchain_access, args.to_token, amount_out_wei)
 
     swap_tx = build_swap_tx(blockchain_access, wallet, encoded_swap)
     swap_tx = apply_route_gas_floor(swap_tx, route)
+    preflight_swap_tx(blockchain_access, swap_tx)
     swap_hash = sign_and_send(blockchain_access, swap_tx, private_key)
     print(f"Swap tx sent: {swap_hash}")
     swap_receipt = wait_for_receipt(
@@ -542,4 +650,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (KyberRequestError, TradePreflightError) as exc:
+        raise SystemExit(str(exc)) from None

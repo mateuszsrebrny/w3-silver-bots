@@ -18,6 +18,7 @@ from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
 from backtesting.portfolio_strategies import (
     BudgetedBTCDefensiveETHAggressive,
     BudgetedDrawdownTiltRebalance,
+    BudgetedEthBtcTrendFilteredDrawdownTilt,
     BudgetedStatic50_50Rebalance,
     BTCDefensiveETHAggressive,
     DrawdownTiltRebalance,
@@ -47,11 +48,13 @@ MIN_QUARTERLY_WINDOW_DAYS = 90
 PRIMARY_STRATEGY_NAMES = [
     "budgeted_static_50_50_rebalance",
     "budgeted_drawdown_tilt_rebalance",
+    "budgeted_ethbtc_trend_filtered_drawdown_tilt",
     "budgeted_btc_defensive_eth_aggressive",
 ]
 STRATEGY_DESCRIPTIONS = {
     "budgeted_static_50_50_rebalance": "Balanced BTC/ETH target with explicit buy and sell budget fractions. This is the gentler budget-constrained benchmark.",
     "budgeted_drawdown_tilt_rebalance": "Contrarian drawdown strategy that uses only a chosen fraction of the weekly buy/sell budget and tilts toward the more discounted asset.",
+    "budgeted_ethbtc_trend_filtered_drawdown_tilt": "Contrarian drawdown strategy with the same budget rules, but it blocks ETH overweight when ETH/BTC is below its trend.",
     "budgeted_btc_defensive_eth_aggressive": "BTC-defensive, ETH-opportunistic regime strategy that chooses how much of the weekly cap to use instead of being clipped afterward.",
     "static_50_50_rebalance": "Keeps a simple balanced BTC/ETH risk bucket with a fixed DAI cash reserve. It is the plain benchmark.",
     "target_50_50_with_cash_band": "Uses broad cheap/neutral/expensive regime bands to raise or lower DAI. It is the more defensive cash-timing version.",
@@ -66,6 +69,7 @@ LINE_PADDING = 90
 PALETTE = {
     "budgeted_static_50_50_rebalance": "#0f766e",
     "budgeted_drawdown_tilt_rebalance": "#9333ea",
+    "budgeted_ethbtc_trend_filtered_drawdown_tilt": "#0369a1",
     "budgeted_btc_defensive_eth_aggressive": "#92400e",
     "static_50_50_rebalance": "#0f766e",
     "target_50_50_with_cash_band": "#dc2626",
@@ -171,6 +175,7 @@ def build_portfolio_strategies():
     return [
         BudgetedStatic50_50Rebalance(),
         BudgetedDrawdownTiltRebalance(),
+        BudgetedEthBtcTrendFilteredDrawdownTilt(),
         BudgetedBTCDefensiveETHAggressive(),
         Static50_50Rebalance(),
         Target50_50WithCashBand(),

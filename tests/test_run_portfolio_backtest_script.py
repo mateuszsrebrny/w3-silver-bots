@@ -101,6 +101,12 @@ def test_parse_since_returns_utc_datetime():
     assert run_portfolio_backtest.parse_since("2020-01-01") == datetime(2020, 1, 1, tzinfo=UTC)
 
 
+def test_build_portfolio_strategies_includes_ethbtc_filtered_budgeted_strategy():
+    names = [strategy.name for strategy in run_portfolio_backtest.build_portfolio_strategies()]
+
+    assert "budgeted_ethbtc_trend_filtered_drawdown_tilt" in names
+
+
 def test_main_passes_arguments_and_reports_paths(monkeypatch, capsys, tmp_path):
     captured = {}
     output_dir = tmp_path / "custom-reports"

@@ -6,6 +6,7 @@ from backtesting.multi_asset import MultiAssetSeries
 from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
 from backtesting.portfolio_strategies import (
     BudgetedBTCDefensiveETHAggressive,
+    BudgetedEthBtcTrendFilteredDrawdownTilt,
     BudgetedStatic50_50Rebalance,
     BTCDefensiveETHAggressive,
     DrawdownTiltRebalance,
@@ -315,6 +316,20 @@ def test_drawdown_tilt_rebalance_overweights_deeper_drawdown_asset():
 
     assert decision.target_weights["DAI"] == Decimal("0.05")
     assert decision.target_weights["ETH-USD"] > decision.target_weights["BTC-USD"]
+
+
+def test_ethbtc_trend_filtered_drawdown_tilt_blocks_weak_eth_overweight():
+    btc = make_series([100] * 250 + [85], product_id="BTC-USD")
+    eth = make_series([100] * 250 + [50], product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    strategy = BudgetedEthBtcTrendFilteredDrawdownTilt(eth_btc_ma_window_days=30)
+
+    decision = strategy.decide(datetime(2024, 9, 7, tzinfo=UTC), bundle, None)
+
+    assert decision.reason == "deep_drawdown_eth_tilt_blocked_by_ethbtc_trend"
+    assert decision.target_weights["DAI"] == Decimal("0.05")
+    assert decision.buy_weights["BTC-USD"] == Decimal("0.5")
+    assert decision.buy_weights["ETH-USD"] == Decimal("0.5")
 
 
 def test_btc_defensive_eth_aggressive_prefers_eth_when_eth_is_strong():

@@ -4,6 +4,7 @@ import os
 import sys
 
 import pytest
+import requests
 
 from scripts import trade
 
@@ -11,6 +12,7 @@ from scripts import trade
 class FakeResponse:
     def __init__(self, payload):
         self.payload = payload
+        self.text = json.dumps(payload)
 
     def raise_for_status(self):
         return None
@@ -353,6 +355,7 @@ def test_main_preview_only_prints_trade_summary(monkeypatch, capsys):
     )
     monkeypatch.setattr(trade, "build_approval_tx", lambda *args, **kwargs: {"gas": 50000})
     monkeypatch.setattr(trade, "build_swap_tx", lambda *args, **kwargs: {"gas": 120000})
+    monkeypatch.setattr(trade, "assert_sufficient_input_balance", lambda blockchain_access, token, wallet, amount: Decimal("1000"))
     monkeypatch.setattr(
         trade,
         "assess_gas_cost",
@@ -390,7 +393,7 @@ def test_main_preview_only_prints_trade_summary(monkeypatch, capsys):
     assert "Preview only. Use --execute to actually send the trade." in output
 
 
-def test_main_execute_rebuilds_swap_after_approval(monkeypatch, capsys):
+def test_main_execute_refreshes_swap_after_approval(monkeypatch, capsys):
     class FakeBlockchainAccess:
         def __init__(self, chain, dry_run):
             self.chain = chain
@@ -454,6 +457,7 @@ def test_main_execute_rebuilds_swap_after_approval(monkeypatch, capsys):
     monkeypatch.setattr(trade, "fetch_route", fake_fetch_route)
     monkeypatch.setattr(trade, "build_encoded_swap", fake_build_encoded_swap)
     monkeypatch.setattr(trade, "build_approval_tx", lambda *args, **kwargs: {"gas": 50000, "nonce": 0})
+    monkeypatch.setattr(trade, "assert_sufficient_input_balance", lambda blockchain_access, token, wallet, amount: Decimal("1000"))
 
     built_swap_txs = [{"gas": 120000, "nonce": 0}, {"gas": 120000, "nonce": 1}]
 
@@ -467,6 +471,7 @@ def test_main_execute_rebuilds_swap_after_approval(monkeypatch, capsys):
         return f"0x{len(sent_txs)}"
 
     monkeypatch.setattr(trade, "build_swap_tx", fake_build_swap_tx)
+    monkeypatch.setattr(trade, "preflight_swap_tx", lambda blockchain_access, tx: None)
     monkeypatch.setattr(trade, "sign_and_send", fake_sign_and_send)
     monkeypatch.setattr(trade, "wait_for_receipt", lambda blockchain_access, tx_hash, timeout_seconds: {"status": 1})
     monkeypatch.setattr(trade, "maybe_confirm", lambda args: None)
@@ -500,8 +505,74 @@ def test_main_execute_rebuilds_swap_after_approval(monkeypatch, capsys):
     assert "Approval tx sent: 0x1" in output
     assert "Swap tx sent: 0x2" in output
     assert sent_txs == [{"gas": 50000, "nonce": 0}, {"gas": 493824, "nonce": 1}]
+    assert "Refreshed Kyber route before swap." in output
     assert len(route_calls) == 2
     assert len(encoded_calls) == 2
+
+
+def test_refresh_swap_route_falls_back_when_kyber_refresh_fails(monkeypatch, capsys):
+    class Args:
+        from_token = "dai"
+        to_token = "wbtc"
+        slippage_bps = 50
+        deadline_seconds = 1200
+
+    fallback_route = trade.SwapRoute(
+        router_address="0xrouter",
+        route_summary={"amountOut": "123", "gas": "456"},
+    )
+    fallback_encoded = trade.EncodedSwap(
+        router_address="0xrouter",
+        calldata="0xdead",
+        value_wei=0,
+    )
+
+    def fake_fetch_route(*args, **kwargs):
+        raise trade.KyberRequestError("Kyber route build failed")
+
+    monkeypatch.setattr(trade, "fetch_route", fake_fetch_route)
+
+    route, encoded = trade.refresh_swap_route(
+        blockchain_access=object(),
+        args=Args(),
+        input_amount=Decimal("150"),
+        wallet="0xwallet",
+        fallback_route=fallback_route,
+        fallback_encoded_swap=fallback_encoded,
+    )
+
+    output = capsys.readouterr().out
+    assert route is fallback_route
+    assert encoded is fallback_encoded
+    assert "Warning: could not refresh Kyber route before swap" in output
+    assert "Using the previously previewed route." in output
+
+
+def test_raise_for_kyber_status_includes_response_body():
+    class FakeFailingResponse:
+        text = "plain error"
+
+        @staticmethod
+        def raise_for_status():
+            response = requests.Response()
+            response.status_code = 422
+            raise requests.HTTPError("422 Client Error", response=response)
+
+        @staticmethod
+        def json():
+            return {"error": "route expired", "code": 422}
+
+    with pytest.raises(trade.KyberRequestError) as exc:
+        trade.raise_for_kyber_status(
+            FakeFailingResponse(),
+            "route build",
+            {"chain": "arbitrum", "amount_in": "150"},
+        )
+
+    message = str(exc.value)
+    assert "Kyber route build failed" in message
+    assert "chain=arbitrum" in message
+    assert '"error": "route expired"' in message
 
 
 def test_apply_route_gas_floor_uses_route_estimate_multiplier():
@@ -575,10 +646,12 @@ def test_main_execute_saves_trade_receipt(monkeypatch, tmp_path, capsys):
         ),
     )
     monkeypatch.setattr(trade, "build_approval_tx", lambda *args, **kwargs: {"gas": 50000, "nonce": 0})
+    monkeypatch.setattr(trade, "assert_sufficient_input_balance", lambda blockchain_access, token, wallet, amount: Decimal("1000"))
 
     built_swap_txs = [{"gas": 120000, "nonce": 0}, {"gas": 120000, "nonce": 1}]
 
     monkeypatch.setattr(trade, "build_swap_tx", lambda *args, **kwargs: built_swap_txs.pop(0))
+    monkeypatch.setattr(trade, "preflight_swap_tx", lambda blockchain_access, tx: None)
     monkeypatch.setattr(
         trade,
         "sign_and_send",
@@ -685,6 +758,7 @@ def test_main_execute_raises_on_failed_approval_receipt(monkeypatch):
     )
     monkeypatch.setattr(trade, "build_approval_tx", lambda *args, **kwargs: {"gas": 50000, "nonce": 0})
     monkeypatch.setattr(trade, "build_swap_tx", lambda *args, **kwargs: {"gas": 120000, "nonce": 1})
+    monkeypatch.setattr(trade, "assert_sufficient_input_balance", lambda blockchain_access, token, wallet, amount: Decimal("1000"))
     monkeypatch.setattr(trade, "sign_and_send", lambda blockchain_access, tx, private_key: "0xapproval")
     monkeypatch.setattr(trade, "wait_for_receipt", lambda blockchain_access, tx_hash, timeout_seconds: {"status": 0})
     monkeypatch.setattr(trade, "maybe_confirm", lambda args: None)
@@ -778,6 +852,8 @@ def test_main_execute_raises_on_failed_swap_receipt(monkeypatch, tmp_path, capsy
         ),
     )
     monkeypatch.setattr(trade, "build_swap_tx", lambda *args, **kwargs: {"gas": 120000, "nonce": 1})
+    monkeypatch.setattr(trade, "preflight_swap_tx", lambda blockchain_access, tx: None)
+    monkeypatch.setattr(trade, "assert_sufficient_input_balance", lambda blockchain_access, token, wallet, amount: Decimal("1000"))
     monkeypatch.setattr(trade, "sign_and_send", lambda blockchain_access, tx, private_key: "0xswap")
     monkeypatch.setattr(
         trade,
@@ -830,3 +906,125 @@ def test_main_execute_raises_on_failed_swap_receipt(monkeypatch, tmp_path, capsy
     assert "Failure diagnostic: Likely gas limit too low for this route." in output
     assert "Call with gas=120000: execution reverted: Call failed" in output
     assert "Call with gas=1500000: ok" in output
+
+
+def test_diagnose_failed_swap_identifies_min_return_revert():
+    class FakeEth:
+        @staticmethod
+        def call(payload, block_identifier="latest"):
+            raise RuntimeError("execution reverted: Return amount is not enough")
+
+    class FakeW3:
+        eth = FakeEth()
+
+    class FakeBlockchainAccess:
+        @staticmethod
+        def get_w3():
+            return FakeW3()
+
+    diagnostic = trade.diagnose_failed_swap(
+        FakeBlockchainAccess(),
+        {
+            "from": "0xwallet",
+            "to": "0xrouter",
+            "data": "0xdead",
+            "value": 0,
+            "gas": 120000,
+        },
+    )
+
+    assert diagnostic["summary"] == (
+        "Route output fell below Kyber minimum return. "
+        "This is usually slippage or a stale route, not gas."
+    )
+
+
+def test_preflight_swap_tx_allows_successful_call():
+    calls = []
+
+    class FakeEth:
+        @staticmethod
+        def call(payload, block_identifier="latest"):
+            calls.append((payload, block_identifier))
+            return b""
+
+    class FakeW3:
+        eth = FakeEth()
+
+    class FakeBlockchainAccess:
+        @staticmethod
+        def get_w3():
+            return FakeW3()
+
+    trade.preflight_swap_tx(
+        FakeBlockchainAccess(),
+        {
+            "from": "0xwallet",
+            "to": "0xrouter",
+            "data": "0xdead",
+            "value": 0,
+            "gas": 120000,
+        },
+    )
+
+    assert calls[0][1] == "latest"
+
+
+def test_preflight_swap_tx_blocks_min_return_revert():
+    class FakeEth:
+        @staticmethod
+        def call(payload, block_identifier="latest"):
+            raise RuntimeError("execution reverted: Return amount is not enough")
+
+    class FakeW3:
+        eth = FakeEth()
+
+    class FakeBlockchainAccess:
+        @staticmethod
+        def get_w3():
+            return FakeW3()
+
+    with pytest.raises(trade.TradePreflightError, match="Kyber route would return less than the minimum amount"):
+        trade.preflight_swap_tx(
+            FakeBlockchainAccess(),
+            {
+                "from": "0xwallet",
+                "to": "0xrouter",
+                "data": "0xdead",
+                "value": 0,
+                "gas": 120000,
+            },
+        )
+
+
+def test_assert_sufficient_input_balance_reports_shortfall():
+    class FakeBlockchainAccess:
+        @staticmethod
+        def check_balance_token(token, wallet):
+            assert token == "dai"
+            assert wallet == "0xwallet"
+            return Decimal("0")
+
+    with pytest.raises(trade.TradePreflightError, match="Insufficient dai balance"):
+        trade.assert_sufficient_input_balance(
+            FakeBlockchainAccess(),
+            "dai",
+            "0xwallet",
+            Decimal("1"),
+        )
+
+
+def test_cli_entry_suppresses_expected_trade_traceback(monkeypatch):
+    monkeypatch.setattr(
+        trade,
+        "main",
+        lambda: (_ for _ in ()).throw(trade.TradePreflightError("preflight failed")),
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        try:
+            trade.main()
+        except (trade.KyberRequestError, trade.TradePreflightError) as err:
+            raise SystemExit(str(err)) from None
+
+    assert str(exc.value) == "preflight failed"
