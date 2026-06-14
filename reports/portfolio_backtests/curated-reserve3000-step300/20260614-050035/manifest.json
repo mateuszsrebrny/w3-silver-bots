@@ -1,0 +1,56 @@
+{
+  "data_files": {
+    "BTC-USD": "data/market/coinbase/BTC-USD-1d.csv",
+    "ETH-USD": "data/market/coinbase/ETH-USD-1d.csv"
+  },
+  "data_root": "data/market/coinbase",
+  "generated_at_utc": "2026-06-14T05:00:35Z",
+  "git_commit": "97e47a5",
+  "initial_btc": "0.07780312",
+  "initial_dai": "11919.872908084459324919",
+  "initial_eth": "3.067701173484763094131416718",
+  "interval_days_options": [
+    7
+  ],
+  "max_buy_step_dai": "300",
+  "max_buy_trade_dai": null,
+  "max_sell_step_dai": null,
+  "quarterly_starts": true,
+  "reserve_buy_scale": "0.50",
+  "reserve_dai": "3000",
+  "reserve_deep_buy_scale": "0.25",
+  "since_dates": [
+    "2020-01-01",
+    "2020-04-01",
+    "2020-07-01",
+    "2020-10-01",
+    "2021-01-01",
+    "2021-04-01",
+    "2021-07-01",
+    "2021-10-01",
+    "2022-01-01",
+    "2022-04-01",
+    "2022-07-01",
+    "2022-10-01",
+    "2023-01-01",
+    "2023-04-01",
+    "2023-07-01",
+    "2023-10-01",
+    "2024-01-01",
+    "2024-04-01",
+    "2024-07-01",
+    "2024-10-01",
+    "2025-01-01",
+    "2025-04-01",
+    "2025-07-01",
+    "2025-10-01",
+    "2026-01-01"
+  ],
+  "symbols": [
+    "BTC-USD",
+    "ETH-USD",
+    "DAI"
+  ],
+  "withdrawal_dai": "0",
+  "withdrawal_interval_days": null
+}

@@ -535,9 +535,9 @@ def format_latest_readme(manifest):
     max_buy_step_dai = manifest.get("max_buy_step_dai")
 
     lines = [
-        "# Portfolio Backtests: Latest",
+        "# Portfolio Backtests",
         "",
-        "This directory is the current working view of the portfolio-management backtests.",
+        "This directory is a generated view of the portfolio-management backtests.",
         "",
         "The current mirrored snapshot behind these files is:",
         "",
@@ -564,6 +564,7 @@ def format_latest_readme(manifest):
             "",
             "- `budgeted_static_50_50_rebalance`",
             "- `budgeted_drawdown_tilt_rebalance`",
+            "- `budgeted_ethbtc_trend_filtered_drawdown_tilt`",
             "- `budgeted_btc_defensive_eth_aggressive`",
             "",
             "Those are the strategies intended for realistic capped live execution.",
