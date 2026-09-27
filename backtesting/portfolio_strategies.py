@@ -724,6 +724,101 @@ class BudgetedBTCDefensiveETHAggressive:
         )
 
 
+class BudgetedBTCDefensiveWithPumpTrim:
+    name = "budgeted_btc_defensive_with_pump_trim"
+
+    def __init__(
+        self,
+        return_window_days=7,
+        pump_return="0.15",
+        btc_trigger_weight="0.47",
+        btc_floor_weight="0.45",
+        eth_trigger_weight="0.33",
+        eth_floor_weight="0.31",
+        base_strategy=None,
+    ):
+        self.return_window_days = return_window_days
+        self.pump_return = Decimal(str(pump_return))
+        self.btc_trigger_weight = Decimal(str(btc_trigger_weight))
+        self.btc_floor_weight = Decimal(str(btc_floor_weight))
+        self.eth_trigger_weight = Decimal(str(eth_trigger_weight))
+        self.eth_floor_weight = Decimal(str(eth_floor_weight))
+        self.base_strategy = base_strategy or BudgetedBTCDefensiveETHAggressive()
+
+    def decide(self, timestamp, bundle, state):
+        base_decision = self.base_strategy.decide(timestamp, bundle, state)
+        values = {
+            "BTC-USD": state.positions["BTC-USD"] * bundle.close("BTC-USD", timestamp),
+            "ETH-USD": state.positions["ETH-USD"] * bundle.close("ETH-USD", timestamp),
+        }
+        total_value = state.dai_units + values["BTC-USD"] + values["ETH-USD"]
+        if total_value <= 0:
+            return base_decision
+
+        current_weights = {
+            "BTC-USD": values["BTC-USD"] / total_value,
+            "ETH-USD": values["ETH-USD"] / total_value,
+            "DAI": state.dai_units / total_value,
+        }
+        target_weights = {
+            symbol: Decimal(str(weight))
+            for symbol, weight in base_decision.target_weights.items()
+        }
+        sell_weights = {
+            "BTC-USD": Decimal(str(base_decision.sell_weights.get("BTC-USD", ZERO))),
+            "ETH-USD": Decimal(str(base_decision.sell_weights.get("ETH-USD", ZERO))),
+        }
+        reasons = []
+
+        btc_return = bundle.trailing_return("BTC-USD", timestamp, self.return_window_days)
+        eth_return = bundle.trailing_return("ETH-USD", timestamp, self.return_window_days)
+
+        if (
+            btc_return is not None
+            and btc_return > self.pump_return
+            and current_weights["BTC-USD"] > self.btc_trigger_weight
+        ):
+            target_weights["BTC-USD"] = self.btc_floor_weight
+            sell_weights["BTC-USD"] = ONE
+            reasons.append("btc_pump_trim")
+
+        if (
+            eth_return is not None
+            and eth_return > self.pump_return
+            and current_weights["ETH-USD"] > self.eth_trigger_weight
+        ):
+            target_weights["ETH-USD"] = self.eth_floor_weight
+            sell_weights["ETH-USD"] = ONE
+            reasons.append("eth_pump_trim")
+
+        if reasons:
+            risk_weight = target_weights["BTC-USD"] + target_weights["ETH-USD"]
+            target_weights["DAI"] = max(ONE - risk_weight, ZERO)
+
+        reason = base_decision.reason
+        if reasons:
+            reason += "+" + "+".join(reasons)
+        return BudgetedTargetAllocationDecision(
+            target_weights=target_weights,
+            rebalance_fraction=ONE if reasons else base_decision.rebalance_fraction,
+            reason=reason,
+            buy_budget_fraction=base_decision.buy_budget_fraction,
+            sell_budget_fraction=ONE if reasons else base_decision.sell_budget_fraction,
+            buy_weights=base_decision.buy_weights,
+            sell_weights=sell_weights,
+        )
+
+    def label(self):
+        return (
+            f"{self.name}(return_window_days={self.return_window_days},"
+            f"pump_return={self.pump_return},"
+            f"btc_trigger_weight={self.btc_trigger_weight},"
+            f"btc_floor_weight={self.btc_floor_weight},"
+            f"eth_trigger_weight={self.eth_trigger_weight},"
+            f"eth_floor_weight={self.eth_floor_weight})"
+        )
+
+
 def _asset_signal(bundle, symbol, timestamp, ma_window_days, drawdown_window_days):
     close = bundle.close(symbol, timestamp)
     moving_average = bundle.moving_average(symbol, timestamp, ma_window_days)

@@ -40,6 +40,23 @@ def sample_config():
                             "address": "0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6",
                             "decimals": "lovelace",
                         },
+                        "usds": {
+                            "address": "0x2222222222222222222222222222222222222222",
+                            "decimals": "ether",
+                        },
+                        "susds": {
+                            "address": "0x4444444444444444444444444444444444444444",
+                            "decimals": "ether",
+                            "erc4626_underlying": "usds",
+                            "defillama_yield_pool_id": "test-pool",
+                            "defillama_yield_label": "Spark Savings APY",
+                        },
+                        "lsusds": {
+                            "address": "0x5555555555555555555555555555555555555555",
+                            "decimals": "ether",
+                            "spark_psm_underlying": "usds",
+                            "spark_psm_address": "0x6666666666666666666666666666666666666666",
+                        },
                         "moousdc": {
                             "address": "0x1111111111111111111111111111111111111111",
                             "decimals": "ether",
@@ -428,6 +445,109 @@ def test_beefy_priced_token_value(monkeypatch, sample_config):
 
     assert blockchain_access.is_beefy_priced_token("beqi") is True
     assert blockchain_access.get_beefy_token_value("beqi", Decimal("4")) == Decimal("5.0")
+
+
+def test_erc4626_underlying_amount_and_value(sample_config):
+    class FakeCall:
+        def __init__(self, value):
+            self.value = value
+
+        def call(self):
+            return self.value
+
+    class FakeFunctions:
+        @staticmethod
+        def convertToAssets(shares):
+            assert shares == 7 * 10**18
+            return FakeCall(735 * 10**16)
+
+    class FakeContract:
+        functions = FakeFunctions()
+
+    class FakeEth:
+        @staticmethod
+        def contract(address, abi):
+            assert address == "0x4444444444444444444444444444444444444444"
+            return FakeContract()
+
+    class FakeW3:
+        eth = FakeEth()
+
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+    blockchain_access._w3 = FakeW3()
+    blockchain_access.check_kyberswap_price = lambda pair, amount: amount * Decimal("0.99")
+
+    assert blockchain_access.is_erc4626_token("susds") is True
+    assert blockchain_access.get_erc4626_underlying_amount("susds", Decimal("7")) == Decimal("7.35")
+    assert blockchain_access.get_erc4626_token_value("susds", Decimal("7"), "usdc") == Decimal("7.2765")
+
+
+def test_spark_psm_underlying_amount_and_value(sample_config):
+    class FakeCall:
+        def __init__(self, value):
+            self.value = value
+
+        def call(self):
+            return self.value
+
+    class FakeFunctions:
+        @staticmethod
+        def previewSwapExactIn(asset_in, asset_out, amount_in):
+            assert asset_in == "0x5555555555555555555555555555555555555555"
+            assert asset_out == "0x2222222222222222222222222222222222222222"
+            assert amount_in == 7 * 10**18
+            return FakeCall(735 * 10**16)
+
+    class FakeContract:
+        functions = FakeFunctions()
+
+    class FakeEth:
+        @staticmethod
+        def contract(address, abi):
+            assert address == "0x6666666666666666666666666666666666666666"
+            return FakeContract()
+
+    class FakeW3:
+        eth = FakeEth()
+
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+    blockchain_access._w3 = FakeW3()
+    blockchain_access.check_kyberswap_price = lambda pair, amount: amount * Decimal("0.99")
+
+    assert blockchain_access.is_spark_psm_token("lsusds") is True
+    assert blockchain_access.get_spark_psm_underlying_amount("lsusds", Decimal("7")) == Decimal("7.35")
+    assert blockchain_access.get_spark_psm_token_value("lsusds", Decimal("7"), "usdc") == Decimal("7.2765")
+
+
+def test_defillama_yield_apr_and_label(monkeypatch, sample_config):
+    class FakeResponse:
+        @staticmethod
+        def raise_for_status():
+            return None
+
+        @staticmethod
+        def json():
+            return {
+                "data": [
+                    {"pool": "other-pool", "apy": 1.2},
+                    {"pool": "test-pool", "apy": 3.6},
+                ]
+            }
+
+    def fake_get(url, timeout):
+        assert url == "https://yields.llama.fi/pools"
+        assert timeout == 20
+        return FakeResponse()
+
+    monkeypatch.setattr("botweb3lib.requests.get", fake_get)
+    BlockchainAccess._config = sample_config
+    blockchain_access = BlockchainAccess("polygon")
+
+    assert blockchain_access.has_defillama_yield_apr("susds") is True
+    assert blockchain_access.get_defillama_yield_label("susds") == "Spark Savings APY"
+    assert blockchain_access.get_defillama_yield_apr("susds") == Decimal("3.6")
 
 
 def test_beefy_priced_token_value_falls_back_to_lps(monkeypatch, sample_config):

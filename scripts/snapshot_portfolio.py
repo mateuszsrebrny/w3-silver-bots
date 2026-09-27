@@ -41,7 +41,7 @@ SUMMARY_HEADERS = [
     "value",
     "unit",
 ]
-STABLE_TOKENS = {"adai", "dai", "usdc", "usdt", "mai"}
+STABLE_TOKENS = {"adai", "dai", "usdc", "usdt", "mai", "usds", "susds"}
 BTC_TOKENS = {"wbtc"}
 ETH_FAMILY_TOKENS = {"eth", "weth", "steth", "wsteth"}
 

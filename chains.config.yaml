@@ -132,6 +132,15 @@ networks:
         usdc:
           address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
           decimals: "mwei"
+        usds:
+          address: "0xdC035D45d973E3EC169d2276DDab16f1e407384F"
+          decimals: "ether"
+        susds:
+          address: "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD"
+          decimals: "ether"
+          erc4626_underlying: "usds"
+          defillama_yield_pool_id: "9d499222-a01a-45bb-bbc9-f01c7923693b"
+          defillama_yield_label: "Spark Savings APY"
         beqi:
           address: "0x6c9D885B37b131aa68794ee1549fFB80be381Fa9"
           decimals: "ether"
@@ -187,3 +196,13 @@ networks:
         usdc:
           address: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831"
           decimals: "mwei"
+        usds:
+          address: "0x6491c05A82219b8D1479057361ff1654749b876b"
+          decimals: "ether"
+        susds:
+          address: "0xdDb46999F8891663a8F2828d25298f70416d7610"
+          decimals: "ether"
+          spark_psm_underlying: "usds"
+          spark_psm_address: "0x2B05F8e1cACC6974fD79A673a341Fe1f58d27266"
+          defillama_yield_pool_id: "9d499222-a01a-45bb-bbc9-f01c7923693b"
+          defillama_yield_label: "Spark Savings APY"

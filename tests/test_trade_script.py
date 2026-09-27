@@ -175,6 +175,28 @@ def test_parse_args_accepts_wsteth_to_wbtc(monkeypatch):
     assert args.amount == "0.1"
 
 
+def test_parse_args_accepts_susds_to_wbtc(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--from-token",
+            "susds",
+            "--to-token",
+            "wbtc",
+            "--amount",
+            "10",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.from_token == "susds"
+    assert args.to_token == "wbtc"
+    assert args.amount == "10"
+
+
 def test_parse_args_accepts_preview_flag(monkeypatch):
     monkeypatch.setattr(
         sys,
@@ -193,6 +215,26 @@ def test_parse_args_accepts_preview_flag(monkeypatch):
 
     assert args.preview is True
     assert args.execute is False
+
+
+def test_parse_args_accepts_assumed_input_balance(monkeypatch):
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "trade.py",
+            "--to-token",
+            "eth",
+            "--amount",
+            "100",
+            "--assume-input-balance",
+            "300",
+        ],
+    )
+
+    args = trade.parse_args()
+
+    assert args.assume_input_balance == "300"
 
 
 def test_fetch_route_uses_kyber_v1_get(monkeypatch):
@@ -1011,6 +1053,48 @@ def test_assert_sufficient_input_balance_reports_shortfall():
             "dai",
             "0xwallet",
             Decimal("1"),
+        )
+
+
+def test_resolve_input_balance_uses_preview_assumption_without_chain_balance():
+    class FakeBlockchainAccess:
+        @staticmethod
+        def check_balance_token(token, wallet):
+            raise AssertionError("real balance should not be queried")
+
+    balance = trade.resolve_input_balance(
+        FakeBlockchainAccess(),
+        "dai",
+        "0xwallet",
+        Decimal("1"),
+        "300",
+        execute=False,
+    )
+
+    assert balance == Decimal("300")
+
+
+def test_resolve_input_balance_rejects_short_preview_assumption():
+    with pytest.raises(trade.TradePreflightError, match="Insufficient assumed dai balance"):
+        trade.resolve_input_balance(
+            object(),
+            "dai",
+            "0xwallet",
+            Decimal("301"),
+            "300",
+            execute=False,
+        )
+
+
+def test_resolve_input_balance_rejects_assumption_in_execute_mode():
+    with pytest.raises(trade.TradePreflightError, match="only allowed in preview"):
+        trade.resolve_input_balance(
+            object(),
+            "dai",
+            "0xwallet",
+            Decimal("1"),
+            "300",
+            execute=True,
         )
 
 

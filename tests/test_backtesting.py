@@ -6,6 +6,7 @@ from backtesting.multi_asset import MultiAssetSeries
 from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
 from backtesting.portfolio_strategies import (
     BudgetedBTCDefensiveETHAggressive,
+    BudgetedBTCDefensiveWithPumpTrim,
     BudgetedEthBtcTrendFilteredDrawdownTilt,
     BudgetedStatic50_50Rebalance,
     BTCDefensiveETHAggressive,
@@ -451,6 +452,50 @@ def test_budgeted_portfolio_engine_uses_step_sell_cap():
     sell_trades = [trade for trade in result.trades if trade.side == "sell"]
     assert sell_trades
     assert max(trade.notional_usd for trade in sell_trades) <= Decimal("100")
+
+
+def test_budgeted_btc_defensive_with_pump_trim_sells_overweight_eth_after_fast_rally():
+    btc = make_series([100] * 15, product_id="BTC-USD")
+    eth = make_series([100] * 7 + [120] * 8, product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    engine = PortfolioManagementBacktestEngine(interval_days=7)
+
+    result = engine.run(
+        bundle,
+        BudgetedBTCDefensiveWithPumpTrim(),
+        datetime(2024, 1, 1, tzinfo=UTC),
+        initial_btc="1",
+        initial_eth="4",
+        initial_dai="500",
+    )
+
+    sell_trades = [trade for trade in result.trades if trade.side == "sell"]
+    assert len(sell_trades) == 1
+    assert sell_trades[0].symbol == "ETH-USD"
+    assert sell_trades[0].reason.endswith("eth_pump_trim")
+    assert sell_trades[0].notional_usd.quantize(Decimal("0.01")) == Decimal("145.20")
+
+
+def test_budgeted_btc_defensive_with_pump_trim_ignores_overweight_eth_without_fast_rally():
+    btc = make_series([100] * 15, product_id="BTC-USD")
+    eth = make_series([100] * 7 + [110] * 8, product_id="ETH-USD")
+    bundle = MultiAssetSeries({"BTC-USD": btc, "ETH-USD": eth})
+    engine = PortfolioManagementBacktestEngine(interval_days=7)
+
+    result = engine.run(
+        bundle,
+        BudgetedBTCDefensiveWithPumpTrim(),
+        datetime(2024, 1, 1, tzinfo=UTC),
+        initial_btc="1",
+        initial_eth="4",
+        initial_dai="500",
+    )
+
+    assert not [
+        trade
+        for trade in result.trades
+        if trade.side == "sell" and "pump_trim" in trade.reason
+    ]
 
 
 def test_budgeted_portfolio_engine_scales_buys_inside_reserve_zone():

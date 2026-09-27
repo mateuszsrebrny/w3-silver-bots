@@ -17,6 +17,7 @@ from backtesting.multi_asset import MultiAssetSeries
 from backtesting.portfolio_engine import PortfolioManagementBacktestEngine
 from backtesting.portfolio_strategies import (
     BudgetedBTCDefensiveETHAggressive,
+    BudgetedBTCDefensiveWithPumpTrim,
     BudgetedDrawdownTiltRebalance,
     BudgetedEthBtcTrendFilteredDrawdownTilt,
     BudgetedStatic50_50Rebalance,
@@ -50,12 +51,14 @@ PRIMARY_STRATEGY_NAMES = [
     "budgeted_drawdown_tilt_rebalance",
     "budgeted_ethbtc_trend_filtered_drawdown_tilt",
     "budgeted_btc_defensive_eth_aggressive",
+    "budgeted_btc_defensive_with_pump_trim",
 ]
 STRATEGY_DESCRIPTIONS = {
     "budgeted_static_50_50_rebalance": "Balanced BTC/ETH target with explicit buy and sell budget fractions. This is the gentler budget-constrained benchmark.",
     "budgeted_drawdown_tilt_rebalance": "Contrarian drawdown strategy that uses only a chosen fraction of the weekly buy/sell budget and tilts toward the more discounted asset.",
     "budgeted_ethbtc_trend_filtered_drawdown_tilt": "Contrarian drawdown strategy with the same budget rules, but it blocks ETH overweight when ETH/BTC is below its trend.",
     "budgeted_btc_defensive_eth_aggressive": "BTC-defensive, ETH-opportunistic regime strategy that chooses how much of the weekly cap to use instead of being clipped afterward.",
+    "budgeted_btc_defensive_with_pump_trim": "Default BTC-defensive DCA strategy plus a reactive trim overlay: sells BTC only when BTC is above 47% and up more than 15% in 7 days, and sells ETH only when ETH is above 33% and up more than 15% in 7 days. Proceeds stay in DAI.",
     "static_50_50_rebalance": "Keeps a simple balanced BTC/ETH risk bucket with a fixed DAI cash reserve. It is the plain benchmark.",
     "target_50_50_with_cash_band": "Uses broad cheap/neutral/expensive regime bands to raise or lower DAI. It is the more defensive cash-timing version.",
     "narrow_cash_band_rebalance": "Same cash-band idea as above, but with narrower DAI swings so it stays more invested for longer.",
@@ -71,6 +74,7 @@ PALETTE = {
     "budgeted_drawdown_tilt_rebalance": "#9333ea",
     "budgeted_ethbtc_trend_filtered_drawdown_tilt": "#0369a1",
     "budgeted_btc_defensive_eth_aggressive": "#92400e",
+    "budgeted_btc_defensive_with_pump_trim": "#be123c",
     "static_50_50_rebalance": "#0f766e",
     "target_50_50_with_cash_band": "#dc2626",
     "narrow_cash_band_rebalance": "#2563eb",
@@ -177,6 +181,7 @@ def build_portfolio_strategies():
         BudgetedDrawdownTiltRebalance(),
         BudgetedEthBtcTrendFilteredDrawdownTilt(),
         BudgetedBTCDefensiveETHAggressive(),
+        BudgetedBTCDefensiveWithPumpTrim(),
         Static50_50Rebalance(),
         Target50_50WithCashBand(),
         NarrowCashBandRebalance(),
@@ -566,6 +571,7 @@ def format_latest_readme(manifest):
             "- `budgeted_drawdown_tilt_rebalance`",
             "- `budgeted_ethbtc_trend_filtered_drawdown_tilt`",
             "- `budgeted_btc_defensive_eth_aggressive`",
+            "- `budgeted_btc_defensive_with_pump_trim`",
             "",
             "Those are the strategies intended for realistic capped live execution.",
             "",

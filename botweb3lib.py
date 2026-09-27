@@ -58,6 +58,28 @@ AAVE_POOL_ABI = [
         "type": "function",
     }
 ]
+ERC4626_ABI = [
+    {
+        "inputs": [{"internalType": "uint256", "name": "shares", "type": "uint256"}],
+        "name": "convertToAssets",
+        "outputs": [{"internalType": "uint256", "name": "assets", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    }
+]
+SPARK_PSM_QUOTE_ABI = [
+    {
+        "inputs": [
+            {"internalType": "address", "name": "assetIn", "type": "address"},
+            {"internalType": "address", "name": "assetOut", "type": "address"},
+            {"internalType": "uint256", "name": "amountIn", "type": "uint256"},
+        ],
+        "name": "previewSwapExactIn",
+        "outputs": [{"internalType": "uint256", "name": "amountOut", "type": "uint256"}],
+        "stateMutability": "view",
+        "type": "function",
+    }
+]
 
 
 class BlockchainAccess:
@@ -129,9 +151,21 @@ class BlockchainAccess:
         token_info = self.get_token_config(token)
         return "beefy_price_oracle_id" in token_info
 
+    def is_erc4626_token(self, token):
+        token_info = self.get_token_config(token)
+        return "erc4626_underlying" in token_info
+
+    def is_spark_psm_token(self, token):
+        token_info = self.get_token_config(token)
+        return "spark_psm_underlying" in token_info
+
     def has_beefy_token_apr(self, token):
         token_info = self.get_token_config(token)
         return "beefy_apr_breakdown_id" in token_info
+
+    def has_defillama_yield_apr(self, token):
+        token_info = self.get_token_config(token)
+        return "defillama_yield_pool_id" in token_info
 
     def get_all_tokens(self):
         return self.get_config()["contracts"]["erc20"].keys()
@@ -377,6 +411,82 @@ class BlockchainAccess:
 
     def get_beefy_token_value(self, token, balance):
         return Decimal(str(balance)) * self.get_beefy_price_usd(token)
+
+    def get_erc4626_underlying_token(self, token):
+        return self.get_token_config(token)["erc4626_underlying"]
+
+    def get_erc4626_underlying_amount(self, token, share_balance):
+        underlying_token = self.get_erc4626_underlying_token(token)
+        share_amount_wei = BlockchainAccess.my_toWei(share_balance, self.get_decimals(token))
+        if share_amount_wei == 0:
+            return Decimal("0")
+
+        vault_contract = self._get_cached_contract(
+            f"erc4626:{token}",
+            self.get_token_contract_address(token),
+            ERC4626_ABI,
+        )
+        asset_amount_wei = vault_contract.functions.convertToAssets(share_amount_wei).call()
+        return BlockchainAccess.my_fromWei(asset_amount_wei, self.get_decimals(underlying_token))
+
+    def get_erc4626_token_value(self, token, share_balance, value_token):
+        underlying_token = self.get_erc4626_underlying_token(token)
+        underlying_amount = self.get_erc4626_underlying_amount(token, share_balance)
+        return self.check_kyberswap_price([underlying_token, value_token], underlying_amount)
+
+    def get_spark_psm_underlying_token(self, token):
+        return self.get_token_config(token)["spark_psm_underlying"]
+
+    def get_spark_psm_address(self, token):
+        return Web3.to_checksum_address(self.get_token_config(token)["spark_psm_address"])
+
+    def get_spark_psm_underlying_amount(self, token, amount):
+        underlying_token = self.get_spark_psm_underlying_token(token)
+        amount_wei = BlockchainAccess.my_toWei(amount, self.get_decimals(token))
+        if amount_wei == 0:
+            return Decimal("0")
+
+        psm_contract = self._get_cached_contract(
+            f"spark_psm:{token}",
+            self.get_spark_psm_address(token),
+            SPARK_PSM_QUOTE_ABI,
+        )
+        underlying_amount_wei = psm_contract.functions.previewSwapExactIn(
+            self.get_token_contract_address(token),
+            self.get_token_contract_address(underlying_token),
+            amount_wei,
+        ).call()
+        return BlockchainAccess.my_fromWei(underlying_amount_wei, self.get_decimals(underlying_token))
+
+    def get_spark_psm_token_value(self, token, amount, value_token):
+        underlying_token = self.get_spark_psm_underlying_token(token)
+        underlying_amount = self.get_spark_psm_underlying_amount(token, amount)
+        return self.check_kyberswap_price([underlying_token, value_token], underlying_amount)
+
+    def get_defillama_yield_label(self, token):
+        token_info = self.get_token_config(token)
+        return token_info.get("defillama_yield_label", "DeFiLlama APY")
+
+    def get_defillama_yield_apr(self, token):
+        token_info = self.get_token_config(token)
+        pool_id = token_info.get("defillama_yield_pool_id")
+        if pool_id is None:
+            return None
+
+        if "defillama_yields:pools" not in BlockchainAccess._beefy_api_cache:
+            response = requests.get("https://yields.llama.fi/pools", timeout=20)
+            response.raise_for_status()
+            BlockchainAccess._beefy_api_cache["defillama_yields:pools"] = response.json()
+
+        pools = BlockchainAccess._beefy_api_cache["defillama_yields:pools"].get("data", [])
+        for pool in pools:
+            if pool.get("pool") != pool_id:
+                continue
+            apy = pool.get("apy")
+            if apy is None:
+                return None
+            return Decimal(str(apy))
+        return None
 
     def get_beefy_token_apr(self, token):
         token_info = self.get_token_config(token)

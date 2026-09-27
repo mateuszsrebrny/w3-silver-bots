@@ -32,6 +32,7 @@ DEFAULT_SWAP_GAS_LIMIT = 900000
 ROUTE_GAS_LIMIT_MULTIPLIER = 4
 DEFAULT_RECEIPT_TIMEOUT_SECONDS = 180
 DEFAULT_RECEIPT_DIR = "reports/trades"
+SUPPORTED_TOKENS = ["dai", "usds", "susds", "eth", "weth", "wbtc", "wsteth"]
 
 
 @dataclass(frozen=True)
@@ -73,8 +74,8 @@ class TradePreflightError(RuntimeError):
 def parse_args():
     parser = argparse.ArgumentParser(description="Execute an Arbitrum swap with a local wallet.")
     parser.add_argument("--chain", default=DEFAULT_CHAIN, choices=["arbitrum"])
-    parser.add_argument("--from-token", default=DEFAULT_FROM_TOKEN, choices=["dai", "weth", "wbtc", "wsteth"])
-    parser.add_argument("--to-token", required=True, choices=["dai", "eth", "weth", "wbtc", "wsteth"])
+    parser.add_argument("--from-token", default=DEFAULT_FROM_TOKEN, choices=SUPPORTED_TOKENS)
+    parser.add_argument("--to-token", required=True, choices=SUPPORTED_TOKENS)
     parser.add_argument("--amount", required=True, help="Input token amount in human units, e.g. 100")
     parser.add_argument("--slippage-bps", type=int, default=DEFAULT_SLIPPAGE_BPS)
     parser.add_argument("--deadline-seconds", type=int, default=DEFAULT_DEADLINE_SECONDS)
@@ -86,6 +87,10 @@ def parse_args():
     parser.add_argument("--execute", action="store_true", help="Actually send transactions. Default is preview only.")
     parser.add_argument("--yes", action="store_true", help="Skip interactive confirmation when --execute is set.")
     parser.add_argument("--allowance-buffer-bps", type=int, default=0, help="Optional approval buffer above the input amount.")
+    parser.add_argument(
+        "--assume-input-balance",
+        help="Preview-only input-token balance override for composed dry runs.",
+    )
     parser.add_argument(
         "--receipt-timeout-seconds",
         type=int,
@@ -134,6 +139,21 @@ def assert_sufficient_input_balance(blockchain_access, token, wallet, amount):
         raise TradePreflightError(
             f"Insufficient {token} balance for swap: have {balance}, need {amount}. "
             "Withdraw from Aave or reduce --amount."
+        )
+    return balance
+
+
+def resolve_input_balance(blockchain_access, token, wallet, amount, assumed_balance, execute):
+    if assumed_balance is None:
+        return assert_sufficient_input_balance(blockchain_access, token, wallet, amount)
+
+    if execute:
+        raise TradePreflightError("--assume-input-balance is only allowed in preview mode.")
+
+    balance = Decimal(str(assumed_balance))
+    if balance < amount:
+        raise TradePreflightError(
+            f"Insufficient assumed {token} balance for swap: have {balance}, need {amount}."
         )
     return balance
 
@@ -492,7 +512,14 @@ def main():
     wallet = wallet_from_private_key(private_key)
 
     input_amount = Decimal(str(args.amount))
-    input_balance = assert_sufficient_input_balance(blockchain_access, args.from_token, wallet, input_amount)
+    input_balance = resolve_input_balance(
+        blockchain_access,
+        args.from_token,
+        wallet,
+        input_amount,
+        args.assume_input_balance,
+        args.execute,
+    )
     route = fetch_route(blockchain_access, args.from_token, args.to_token, input_amount, wallet)
     encoded_swap = build_encoded_swap(
         blockchain_access,

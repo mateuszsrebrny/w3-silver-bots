@@ -11,8 +11,8 @@ DEFAULT_VALUE_TOKEN = "usdc"
 TRACKED_TOKENS = {
     "polygon": ["pol", "rcowwmaticldo", "aave", "link", "ghst", "bal"],
     "optimism": ["aop", "moowstethweth", "eth", "velo"],
-    "ethereum": ["rbeqi", "adai", "eth", "dai", "wbtc", "glm", "wsteth", "wtao"],
-    "arbitrum": ["adai", "aarb", "eth", "dai", "wbtc", "wsteth"],
+    "ethereum": ["rbeqi", "adai", "eth", "dai", "usds", "susds", "wbtc", "glm", "wsteth", "wtao"],
+    "arbitrum": ["adai", "aarb", "eth", "dai", "usds", "susds", "wbtc", "wsteth"],
 }
 
 
@@ -39,6 +39,8 @@ class TokenBalance:
         self.balance = self._fetch_balance()
         self.value = self._fetch_value()
         self.interest_apr = self._fetch_interest_apr()
+        self.underlying_amount = self._fetch_underlying_amount()
+        self.underlying_token = self._fetch_underlying_token()
 
     def _fetch_balance(self):
         """Fetch the balance of the token for the given wallet."""
@@ -53,6 +55,20 @@ class TokenBalance:
         is_beefy_priced_token = getattr(self._blockchain_access, "is_beefy_priced_token", None)
         if is_beefy_priced_token is not None and is_beefy_priced_token(self.token_name):
             return self._blockchain_access.get_beefy_token_value(self.token_name, self.balance)
+        is_erc4626_token = getattr(self._blockchain_access, "is_erc4626_token", None)
+        if is_erc4626_token is not None and is_erc4626_token(self.token_name):
+            return self._blockchain_access.get_erc4626_token_value(
+                self.token_name,
+                self.balance,
+                self.value_token,
+            )
+        is_spark_psm_token = getattr(self._blockchain_access, "is_spark_psm_token", None)
+        if is_spark_psm_token is not None and is_spark_psm_token(self.token_name):
+            return self._blockchain_access.get_spark_psm_token_value(
+                self.token_name,
+                self.balance,
+                self.value_token,
+            )
         return self._blockchain_access.check_kyberswap_price(
             [self.token_name, self.value_token],
             self.balance,
@@ -96,6 +112,24 @@ class TokenBalance:
                 return None
 
         get_aave_supply_apr = getattr(self._blockchain_access, "get_aave_supply_apr", None)
+        get_defillama_yield_apr = getattr(self._blockchain_access, "get_defillama_yield_apr", None)
+        get_defillama_yield_label = getattr(self._blockchain_access, "get_defillama_yield_label", None)
+        has_defillama_yield_apr = getattr(self._blockchain_access, "has_defillama_yield_apr", None)
+        if (
+            get_defillama_yield_apr is not None
+            and has_defillama_yield_apr is not None
+            and has_defillama_yield_apr(self.token_name)
+        ):
+            try:
+                apr = get_defillama_yield_apr(self.token_name)
+                if apr is not None:
+                    label = "DeFiLlama APY"
+                    if get_defillama_yield_label is not None:
+                        label = get_defillama_yield_label(self.token_name)
+                    return (label, apr)
+            except Exception:
+                return None
+
         if get_aave_supply_apr is None:
             return None
 
@@ -106,6 +140,88 @@ class TokenBalance:
             return ("Aave supply APR", apr)
         except Exception:
             return None
+
+    def _fetch_underlying_amount(self):
+        is_erc4626_token = getattr(self._blockchain_access, "is_erc4626_token", None)
+        get_erc4626_underlying_amount = getattr(
+            self._blockchain_access,
+            "get_erc4626_underlying_amount",
+            None,
+        )
+        if (
+            is_erc4626_token is not None
+            and get_erc4626_underlying_amount is not None
+            and is_erc4626_token(self.token_name)
+        ):
+            try:
+                return get_erc4626_underlying_amount(self.token_name, self.balance)
+            except Exception:
+                return None
+
+        is_spark_psm_token = getattr(self._blockchain_access, "is_spark_psm_token", None)
+        get_spark_psm_underlying_amount = getattr(
+            self._blockchain_access,
+            "get_spark_psm_underlying_amount",
+            None,
+        )
+        if (
+            is_spark_psm_token is not None
+            and get_spark_psm_underlying_amount is not None
+            and is_spark_psm_token(self.token_name)
+        ):
+            try:
+                return get_spark_psm_underlying_amount(self.token_name, self.balance)
+            except Exception:
+                return None
+
+        return None
+
+    def _fetch_underlying_token(self):
+        if self.underlying_amount is None:
+            return None
+
+        get_erc4626_underlying_token = getattr(
+            self._blockchain_access,
+            "get_erc4626_underlying_token",
+            None,
+        )
+        is_erc4626_token = getattr(self._blockchain_access, "is_erc4626_token", None)
+        if (
+            is_erc4626_token is not None
+            and get_erc4626_underlying_token is not None
+            and is_erc4626_token(self.token_name)
+        ):
+            try:
+                return get_erc4626_underlying_token(self.token_name)
+            except Exception:
+                return None
+
+        get_spark_psm_underlying_token = getattr(
+            self._blockchain_access,
+            "get_spark_psm_underlying_token",
+            None,
+        )
+        is_spark_psm_token = getattr(self._blockchain_access, "is_spark_psm_token", None)
+        if (
+            is_spark_psm_token is not None
+            and get_spark_psm_underlying_token is not None
+            and is_spark_psm_token(self.token_name)
+        ):
+            try:
+                return get_spark_psm_underlying_token(self.token_name)
+            except Exception:
+                return None
+
+        return None
+
+    def _underlying_suffix(self):
+        if (
+            self.underlying_amount is None
+            or self.underlying_token is None
+            or Decimal(str(self.balance)) == 0
+        ):
+            return ""
+        return f" (underlying: {self.underlying_amount} {self.underlying_token})"
 
     def _interest_suffix(self):
         if self.interest_apr is None or Decimal(str(self.balance)) == 0:
@@ -123,7 +239,8 @@ class TokenBalance:
         wallet_part = f" [{self.wallet_label}]" if self.wallet_label else ""
         return (
             f"{self.token_name} @ {self._blockchain_access.get_chain()}{wallet_part}: "
-            f"{self.balance} = {self._display_value()} {self.value_token}{self._interest_suffix()}"
+            f"{self.balance} = {self._display_value()} {self.value_token}"
+            f"{self._underlying_suffix()}{self._interest_suffix()}"
         )
 
     def __lt__(self, other):

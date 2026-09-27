@@ -28,6 +28,24 @@ class FakeBlockchainAccess:
     def is_beefy_priced_token(self, token):
         return token in {"beqi", "rbeqi", "rcowwmaticldo"}
 
+    def is_erc4626_token(self, token):
+        return token == "susds"
+
+    def get_erc4626_token_value(self, token, balance, value_token):
+        assert token == "susds"
+        assert balance == 7
+        assert value_token == "usdc"
+        return Decimal("7.35")
+
+    def get_erc4626_underlying_amount(self, token, balance):
+        assert token == "susds"
+        assert balance == 7
+        return Decimal("7.35")
+
+    def get_erc4626_underlying_token(self, token):
+        assert token == "susds"
+        return "usds"
+
     def get_beefy_vault_value(self, token, balance):
         assert token == "moowstethweth"
         assert balance == 7
@@ -68,6 +86,19 @@ class FakeBlockchainAccess:
         if token == "aop":
             return Decimal("2.25")
         return None
+
+    def has_defillama_yield_apr(self, token):
+        return token == "susds"
+
+    def get_defillama_yield_apr(self, token):
+        if token == "susds":
+            return Decimal("3.6")
+        return None
+
+    def get_defillama_yield_label(self, token):
+        if token == "susds":
+            return "Spark Savings APY"
+        return "DeFiLlama APY"
 
 
 def test_token_balance_fetches_balance_and_value():
@@ -165,6 +196,22 @@ def test_token_balance_uses_beefy_price_and_apr_for_reward_pool_token():
     assert token_balance.value == Decimal("8.75")
     assert token_balance.interest_apr == ("Beefy APR", Decimal("22.237282073794604"))
     assert str(token_balance) == "rbeqi @ ethereum: 7 = 8.75 usdc (Beefy APR: 22.24%)"
+
+
+def test_token_balance_uses_erc4626_underlying_value():
+    token_balance = portfolio_tracker.TokenBalance(
+        FakeBlockchainAccess("arbitrum", True),
+        "susds",
+        "0xwallet",
+    )
+
+    assert token_balance.value == Decimal("7.35")
+    assert token_balance.interest_apr == ("Spark Savings APY", Decimal("3.6"))
+    assert (
+        str(token_balance)
+        == "susds @ arbitrum: 7 = 7.35 usdc (underlying: 7.35 usds) "
+        "(Spark Savings APY: 3.60%)"
+    )
 
 
 def test_token_balance_hides_apr_and_prints_clean_zero():
