@@ -301,6 +301,15 @@ def test_build_balances_uses_tracked_tokens(monkeypatch):
     assert all(balance.wallet == "0xwallet" for balance in balances)
 
 
+def test_optimism_tracks_tokens_received_after_beefy_withdrawal():
+    assert {"weth", "wsteth"} <= set(portfolio_tracker.TRACKED_TOKENS["optimism"])
+
+    with Path("chains.config.yaml").open() as config_file:
+        tokens = yaml.safe_load(config_file)["networks"]["optimism"]["contracts"]["erc20"]
+
+    assert {"weth", "wsteth"} <= set(tokens)
+
+
 def test_build_balances_supports_multiple_wallets(monkeypatch):
     original_tracked = portfolio_tracker.TRACKED_TOKENS
     portfolio_tracker.TRACKED_TOKENS = {"polygon": ["bal"]}

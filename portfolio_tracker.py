@@ -10,7 +10,7 @@ DEFAULT_VALUE_TOKEN = "usdc"
 
 TRACKED_TOKENS = {
     "polygon": ["pol", "rcowwmaticldo", "aave", "link", "ghst", "bal"],
-    "optimism": ["aop", "moowstethweth", "eth", "velo"],
+    "optimism": ["aop", "moowstethweth", "eth", "weth", "wsteth", "velo"],
     "ethereum": ["rbeqi", "adai", "eth", "dai", "usds", "susds", "wbtc", "glm", "wsteth", "wtao"],
     "arbitrum": ["adai", "aarb", "eth", "dai", "usds", "susds", "wbtc", "wsteth"],
 }
