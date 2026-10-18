@@ -153,6 +153,24 @@ when you want to refresh a previously saved date.
 Archive endpoints can rate-limit historical reads; the alternate endpoint above
 completed the initial backfill, while the default endpoint refused old blocks.
 
+### Price-only dTAO basket backtest
+
+```bash
+.venv/bin/python scripts/run_dtao_backtest.py --netuids 4,9,44 --target-tao 1 --trim-trigger-tao 1.2
+```
+
+The script starts at the first date shared by the **current incarnation** of
+each selected subnet, invests one TAO per subnet at that day's spot price,
+and compares holding with a weekly Sunday rule: when an alpha position is
+worth more than 1.2 TAO, sell it down to 1 TAO and retain the proceeds as
+free TAO. It reports final portfolio values, trim count and daily max drawdown.
+It refuses missing daily prices rather than forward-filling them.
+
+This is a price-only comparison in TAO, not a staking-performance simulation.
+It excludes alpha dividends, swap impact, fees and validator differences.
+Choosing today's subnets for a historical test also introduces selection bias;
+the result cannot establish how a historical top-11 selection rule would fare.
+
 ## Running Recurring DCA Backtests
 
 ```bash
