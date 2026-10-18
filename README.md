@@ -122,6 +122,30 @@ Seed or update local daily candles:
 
 This writes local CSVs under [data/market/coinbase](data/market/coinbase).
 
+### Historical dTAO snapshots
+
+The read-only dTAO sync uses the Bittensor archive node. Install its SDK in a
+separate environment: Bittensor 11.3 requires a newer `websockets` than this
+repo's pinned Web3 version.
+
+```bash
+python3 -m venv .venv-dtao
+.venv-dtao/bin/pip install bittensor==11.3.0
+.venv-dtao/bin/python scripts/sync_dtao_history.py --network wss://archive.sub.latent.to:443 --since 2025-02-14 --until 2025-02-20 --resume
+```
+
+Without dates, the script snapshots today at the first finalized block at or
+after 00:30 UTC; run it after that time. It writes `data/dtao/daily.csv`, which
+is local and gitignored. Re-running a day replaces that day's rows. Each row
+contains the block, subnet number, registration block, TAO/alpha pool reserves
+and implied TAO-per-alpha spot price. The registration block distinguishes
+reused subnet numbers and avoids mixing different incarnations in a backtest.
+This is a daily price snapshot, not OHLC or realized staking return.
+`--resume` skips dates already in the CSV after an interrupted backfill; omit it
+when you want to refresh a previously saved date.
+Archive endpoints can rate-limit historical reads; the alternate endpoint above
+completed the initial backfill, while the default endpoint refused old blocks.
+
 ## Running Recurring DCA Backtests
 
 ```bash

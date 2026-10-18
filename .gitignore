@@ -2,6 +2,7 @@ __pycache__
 __pycache__/
 **/__pycache__/
 .venv/
+.venv-dtao/
 *.swp
 l.html
 .env
@@ -16,3 +17,4 @@ reports/portfolio_backtests/curated-*/*/*.svg
 reports/portfolio_backtests/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*/
 reports/lp_backtests/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-*/
 data/portfolio_snapshots/
+data/dtao/
