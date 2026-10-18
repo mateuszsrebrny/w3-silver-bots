@@ -110,6 +110,15 @@ The tracker currently scans:
 - `ethereum`
 - `arbitrum`
 
+To include a Bittensor coldkey in the same run, set `BITTENSOR_WALLET` in
+`.env` (public SS58 address only) or pass `--bittensor-wallet 5YourColdkey`.
+Use `--chain bittensor` to query only Bittensor. The tracker reads free TAO and
+staked TAO/alpha across subnets. Alpha is valued at on-chain TAO/alpha spot,
+then all Bittensor positions are converted with Coinbase's TAO/USD spot price.
+The displayed USDC equivalent assumes USD and USDC parity; it is not an
+executable exit quote and excludes unstaking slippage and fees. No Bittensor
+private key or mnemonic is needed.
+
 Tracked tokens are defined in [portfolio_tracker.py](portfolio_tracker.py), while chain/token metadata comes from [chains.config.yaml](chains.config.yaml).
 
 ## Syncing Historical Data
@@ -124,14 +133,12 @@ This writes local CSVs under [data/market/coinbase](data/market/coinbase).
 
 ### Historical dTAO snapshots
 
-The read-only dTAO sync uses the Bittensor archive node. Install its SDK in a
-separate environment: Bittensor 11.3 requires a newer `websockets` than this
-repo's pinned Web3 version.
+The read-only dTAO sync uses the Bittensor archive node. Bittensor and Web3
+share the project's `.venv` (Web3 7.16 supports Bittensor's `websockets`
+requirement).
 
 ```bash
-python3 -m venv .venv-dtao
-.venv-dtao/bin/pip install bittensor==11.3.0
-.venv-dtao/bin/python scripts/sync_dtao_history.py --network wss://archive.sub.latent.to:443 --since 2025-02-14 --until 2025-02-20 --resume
+.venv/bin/python scripts/sync_dtao_history.py --network wss://archive.sub.latent.to:443 --since 2025-02-14 --until 2025-02-20 --resume
 ```
 
 Without dates, the script snapshots today at the first finalized block at or

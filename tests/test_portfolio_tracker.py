@@ -6,6 +6,7 @@ import sys
 import yaml
 
 import portfolio_tracker
+from bittensor_portfolio import BittensorBalance
 
 
 class FakeBlockchainAccess:
@@ -266,6 +267,18 @@ def test_summarize_by_chain_and_total():
     assert total == Decimal("12.750000")
 
 
+def test_bittensor_balances_are_sorted_and_included_in_totals():
+    polygon = portfolio_tracker.TokenBalance(FakeBlockchainAccess("polygon", True), "bal", "0xwallet")
+    bittensor = BittensorBalance("tao", Decimal("1"), Decimal("30"), "5coldkey")
+    balances = portfolio_tracker.sort_balances([polygon, bittensor])
+
+    assert balances == [bittensor, polygon]
+    assert portfolio_tracker.summarize_by_chain(balances) == {
+        "bittensor": Decimal("30.000000"),
+        "polygon": Decimal("21.000000"),
+    }
+
+
 def test_print_summaries_outputs_chain_and_portfolio_totals(capsys):
     polygon = portfolio_tracker.TokenBalance(FakeBlockchainAccess("polygon", True), "bal", "0xwallet")
     arbitrum = portfolio_tracker.TokenBalance(FakeBlockchainAccess("arbitrum", True), "adai", "0xwallet")
@@ -354,6 +367,15 @@ def test_parse_args_accepts_repeated_chain(monkeypatch):
     args = portfolio_tracker.parse_args()
 
     assert args.chain == ["arbitrum", "ethereum"]
+
+
+def test_parse_args_accepts_bittensor_wallet(monkeypatch):
+    monkeypatch.setattr(sys, "argv", ["portfolio_tracker.py", "--chain", "bittensor", "--bittensor-wallet", "5coldkey"])
+
+    args = portfolio_tracker.parse_args()
+
+    assert args.chain == ["bittensor"]
+    assert args.bittensor_wallet == "5coldkey"
 
 
 def test_all_tracked_tokens_exist_in_config():

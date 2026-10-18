@@ -1,9 +1,11 @@
 import argparse
+import asyncio
 from decimal import Decimal
 from dotenv import load_dotenv
 import os
 from dataclasses import dataclass
 from botweb3lib import BlockchainAccess
+from bittensor_portfolio import read_balances as read_bittensor_balances
 
 DEFAULT_CHAINS = ["polygon", "optimism", "ethereum", "arbitrum"]
 DEFAULT_VALUE_TOKEN = "usdc"
@@ -41,6 +43,10 @@ class TokenBalance:
         self.interest_apr = self._fetch_interest_apr()
         self.underlying_amount = self._fetch_underlying_amount()
         self.underlying_token = self._fetch_underlying_token()
+
+    @property
+    def chain(self):
+        return self._blockchain_access.get_chain()
 
     def _fetch_balance(self):
         """Fetch the balance of the token for the given wallet."""
@@ -257,7 +263,9 @@ def print_balances(token_balances):
 def summarize_by_chain(token_balances, value_token=DEFAULT_VALUE_TOKEN):
     summaries = {}
     for token_balance in token_balances:
-        chain = token_balance._blockchain_access.get_chain()
+        chain = getattr(token_balance, "chain", None)
+        if chain is None:
+            chain = token_balance._blockchain_access.get_chain()
         summaries.setdefault(chain, Decimal("0"))
         summaries[chain] += Decimal(str(token_balance.value))
     return {
@@ -289,8 +297,12 @@ def parse_args():
     parser.add_argument(
         "--chain",
         action="append",
-        choices=DEFAULT_CHAINS,
+        choices=[*DEFAULT_CHAINS, "bittensor"],
         help="Limit tracking to this chain. Repeat the flag to query multiple chains.",
+    )
+    parser.add_argument(
+        "--bittensor-wallet",
+        help="Public Bittensor coldkey address; defaults to BITTENSOR_WALLET from .env.",
     )
     return parser.parse_args()
 
@@ -324,7 +336,7 @@ def build_balances(
 
 
 def sort_balances(token_balances):
-    token_balances.sort(reverse=True)
+    token_balances.sort(key=lambda balance: Decimal(str(balance.value)), reverse=True)
     return token_balances
 
 
@@ -367,15 +379,23 @@ def load_wallets(wallet=None):
 def main():
     load_dotenv()
     args = parse_args()
-    wallets = load_wallets(wallet=args.wallet)
-    chains = args.chain or DEFAULT_CHAINS
+    bittensor_wallet = getattr(args, "bittensor_wallet", None) or os.getenv("BITTENSOR_WALLET")
+    chains = args.chain or [*DEFAULT_CHAINS, *(["bittensor"] if bittensor_wallet else [])]
+    evm_chains = [chain for chain in chains if chain != "bittensor"]
+    wallets = load_wallets(wallet=args.wallet) if evm_chains else []
     dry_run = True
 
     for wallet in wallets:
         print(f"Wallet [{wallet.label}]: {wallet.address}")
-    BlockchainAccess.load_config()
+    if evm_chains:
+        BlockchainAccess.load_config()
 
-    token_balances = build_balances(chains, wallets, dry_run=dry_run)
+    token_balances = build_balances(evm_chains, wallets, dry_run=dry_run) if evm_chains else []
+    if "bittensor" in chains:
+        if not bittensor_wallet:
+            raise ValueError("Set BITTENSOR_WALLET or pass --bittensor-wallet for Bittensor tracking.")
+        print(f"Bittensor wallet: {bittensor_wallet}")
+        token_balances.extend(asyncio.run(read_bittensor_balances(bittensor_wallet)))
     sort_balances(token_balances)
     print_balances(token_balances)
     print_summaries(token_balances)

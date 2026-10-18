@@ -29,7 +29,7 @@ async def run(args):
     try:
         from bittensor import Client
     except ImportError as exc:
-        raise SystemExit("Install bittensor==11.3.0 in a separate venv; see README.") from exc
+        raise SystemExit("Install project requirements in .venv; see README.") from exc
     client = Client(network=args.network, fallback_endpoints=[], archive_endpoints=[])
     await client.connect()
     try:
