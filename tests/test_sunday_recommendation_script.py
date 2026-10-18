@@ -135,3 +135,29 @@ def test_main_prints_compact_recommendation(monkeypatch, capsys):
     assert "Signal diagnostics:" in output
     assert "Relative returns (84d): BTC 8.00%, ETH 2.00%" in output
     assert "Both BTC and ETH are still in the strategy's cheap/weak bucket." in output
+
+
+def test_defensive_note_does_not_claim_risk_on():
+    bundle = FakeBundle()
+    bundle.close = lambda symbol, timestamp: {
+        "BTC-USD": Decimal("80000"),
+        "ETH-USD": Decimal("2400"),
+    }[symbol]
+    bundle.moving_average = lambda symbol, timestamp, window_days: {
+        "BTC-USD": Decimal("70000"),
+        "ETH-USD": Decimal("2600"),
+    }[symbol]
+    bundle.trailing_return = lambda symbol, timestamp, window_days: {
+        "BTC-USD": Decimal("0.20"),
+        "ETH-USD": Decimal("0.30"),
+    }[symbol]
+
+    diagnostics = sunday_recommendation._strategy_diagnostics(
+        bundle,
+        bundle.timestamps[0],
+        FakeStrategy(),
+        "btc_defensive_regime",
+    )
+
+    assert "buys favor BTC" in diagnostics["notes"][0]
+    assert "risk-on" not in diagnostics["notes"][0]

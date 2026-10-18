@@ -67,7 +67,7 @@ def _find_strategy_snapshot(results, strategy_name):
     raise ValueError(f"Unknown strategy: {strategy_name}")
 
 
-def _strategy_diagnostics(bundle, timestamp, strategy):
+def _strategy_diagnostics(bundle, timestamp, strategy, reason):
     diagnostics = {
         "btc": _asset_signal(bundle, "BTC-USD", timestamp, 200, 365),
         "eth": _asset_signal(bundle, "ETH-USD", timestamp, 200, 365),
@@ -86,7 +86,7 @@ def _strategy_diagnostics(bundle, timestamp, strategy):
         return diagnostics
 
     if strategy.name == "budgeted_btc_defensive_eth_aggressive":
-        if btc["cheap"] and eth["cheap"]:
+        if reason == "both_weak_btc_defensive":
             diagnostics["notes"].append(
                 "Both BTC and ETH are still in the strategy's cheap/weak bucket."
             )
@@ -94,14 +94,16 @@ def _strategy_diagnostics(bundle, timestamp, strategy):
                 diagnostics["notes"].append(
                     "ETH has not cleared the relative-strength filter versus BTC, so the buy stays BTC-heavy."
                 )
-        elif eth_return is not None and btc_return is not None and eth_return > btc_return:
+        elif reason == "eth_strong_risk_on":
             diagnostics["notes"].append(
                 "ETH is beating BTC on 84-day return while no longer looking cheap, so the strategy treats this as risk-on."
             )
-        else:
+        elif reason == "btc_defensive_regime":
             diagnostics["notes"].append(
-                "BTC looks stronger on the trend/discount test, so the strategy stays defensive."
+                "BTC is outside the cheap/weak bucket while ETH fails the strength test, so buys favor BTC."
             )
+        else:
+            diagnostics["notes"].append("Neither asset qualifies for a directional tilt, so the strategy stays balanced.")
     elif strategy.name == "budgeted_drawdown_tilt_rebalance":
         if btc["drawdown"] > eth["drawdown"]:
             diagnostics["notes"].append(
@@ -138,7 +140,7 @@ def format_recommendation(
     btc_trade = _signed_trade_notional(snapshot, "BTC-USD")
     eth_trade = _signed_trade_notional(snapshot, "ETH-USD")
     current_values = _current_values(bundle, effective_timestamp, btc_units, eth_units, dai_units)
-    diagnostics = _strategy_diagnostics(bundle, effective_timestamp, strategy)
+    diagnostics = _strategy_diagnostics(bundle, effective_timestamp, strategy, snapshot.decision.reason)
     btc_signal = diagnostics["btc"]
     eth_signal = diagnostics["eth"]
     btc_return = diagnostics["btc_return_84d"]
