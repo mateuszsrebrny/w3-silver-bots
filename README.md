@@ -171,6 +171,82 @@ It excludes alpha dividends, swap impact, fees and validator differences.
 Choosing today's subnets for a historical test also introduces selection bias;
 the result cannot establish how a historical top-11 selection rule would fare.
 
+Compare several trim triggers across monthly entry dates instead of relying on
+one start date:
+
+```bash
+.venv/bin/python scripts/run_dtao_sweep.py --netuids 4,9,44 --triggers 1.1,1.2,1.3,1.5 --minimum-days 90
+```
+
+Each entry starts with one TAO per selected subnet and ends on the last
+available date. The monthly windows overlap, so their win counts are a
+sensitivity check, not independent statistical trials. This sweep has the
+same price-only and present-day-subnet-selection limitations as the single
+backtest.
+
+For a historical top-11 basket, first fetch block-pinned TAO-in-emission
+snapshots for the dates in `data/dtao/daily.csv`:
+
+```bash
+.venv/bin/python -u scripts/sync_dtao_emissions.py --signal-only
+.venv/bin/python scripts/run_dtao_top11.py
+```
+
+Omit `--signal-only` to backfill every price-snapshot day, rather than just
+the monthly entry signals. The emission sync resumes by skipping existing
+daily files in the gitignored `data/dtao/emissions/` directory. Each cohort buys the 11 subnets with the
+highest TAO injected into their pools per block on the **previous day**, at
+the first Sunday spot price of each month, then holds that basket for 90 days.
+It compares holding with weekly trims above 1.1, 1.2, 1.3 and 1.5 TAO per
+position, selling back to 1 TAO. A missing or re-registered subnet is marked
+worth zero from that day onward; an untradeable entry is skipped rather than
+replaced using future knowledge. This conservative delisting treatment is not
+an estimate of actual recovery. The cohorts overlap, and the simulation omits
+staking dividends, slippage and fees. The top-11 ranking is a selection signal,
+not a yield estimate.
+
+To test the proposed rebalancing rule on the same 90-day cohorts:
+
+```bash
+.venv/bin/python scripts/run_dtao_rebalance.py --trigger 1.2
+```
+
+It compares fixed-basket hold and Sunday trims with three monthly top-11
+rotation variants. `Swap only` leaves each position untouched until it leaves
+the prior-day top 11 on the first Sunday of a month, then sells it and invests
+the **full** proceeds equally among replacement subnets. It never trims or
+tops up retained positions. `Swap+trim` also trims remaining winners above
+1.2 TAO back to 1 TAO every Sunday, and caps new entrants at 1 TAO each.
+If proceeds are insufficient, new entrants get smaller equal allocations;
+there is no new capital. `Swap+topup` additionally spends remaining cash pro
+rata on retained positions below 1 TAO. Any unspent proceeds stay in TAO.
+By default no trading cost is deducted; use `--cost-bps` for a flat cost
+sensitivity check. Real rotation outcomes can differ because slippage and
+fees depend on the subnet and trade size. Daily prices are snapshots, not
+executable quotes.
+
+For the same pure swap rule checked **daily**, backfill all daily emission
+snapshots first (without `--signal-only`), then run:
+
+```bash
+.venv/bin/python -u scripts/sync_dtao_emissions.py
+.venv/bin/python scripts/run_dtao_rebalance.py --cadence daily
+.venv/bin/python scripts/run_dtao_rebalance.py --cadence daily --cost-bps 50
+.venv/bin/python scripts/run_dtao_rebalance.py --cadence daily --basket-size 5 --compare-size 11
+```
+
+The daily test uses each day's price snapshot for execution and the previous
+day's emission ranking for selection. It requires every prior-day ranking in
+each cohort; missing data is an error, not an implicit decision to hold.
+If fewer than 11 subnets have positive emissions on a day, the test leaves
+the basket unchanged rather than breaking a zero-emission tie arbitrarily;
+the number of such skipped signals is reported.
+The optional `--cost-bps` applies a flat per-side deduction to each rotation
+trade; it is only a sensitivity check, not a subnet-specific slippage model.
+The basket-size comparison keeps total starting capital at 11 TAO by default:
+top 5 starts at 2.2 TAO per subnet versus 1 TAO for top 11. Use
+`--total-tao` to change that common starting capital.
+
 ## Running Recurring DCA Backtests
 
 ```bash
